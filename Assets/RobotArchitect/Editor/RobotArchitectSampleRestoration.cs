@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.UI;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 using UnityEngine;
 
 namespace RobotArchitect.Editor

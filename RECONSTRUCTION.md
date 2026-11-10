@@ -69,30 +69,26 @@ $copy = 'C:\path\to\isolated\RobotArchitect'
 ## Repository boundaries
 
 Omit these directories and their adjacent root `.meta` files from a source-only
-copy and eventual Git staging (the rules have not been added to `.gitignore` by
-this tooling task):
+copy and eventual Git staging (covered by `.gitignore`):
 
 - `Assets/Samples/`
 - `Assets/Real Stars Skybox/`
 - `Assets/TextMesh Pro/`
-- `Assets/pipes/` (redistribution provenance unresolved)
 
 Also omit Library, Temp, Logs, Build/Builds, UserSettings, IDE caches, generated
 project files, APK/AAB files, local credentials and private signing material.
 Do not copy the working Library to a reconstruction project.
 
-Keep original source and `.meta` files under RobotArchitect, Scripts, Prefabs,
+Keep original source and `.meta` files under RobotArchitect and Scripts,
 Settings, XR, XRI, CompositionLayers, sanitized Resources and required Oculus
 settings; keep ProjectSettings, Packages and documentation. Keep `SECURITY.md`
 and `DevAgentCredentialBuildGuard.cs` and its metadata. The credential guard must
 remain enabled for Android builds because Meta's build processor injects a token.
 
-Robot Architect has no identified dependency on Real Stars Skybox or pipes.
-The legacy Digital Twins scene requires pipes. Legacy scenes and recovery copies
-need separate review before inclusion; excluding pipes does not make those scenes
-reproducible. Do not silently edit them or their build entries. The structural
-validator requires `Assets/Prefabs/CubePiece.prefab`, although the playable scene
-uses the independent `Assets/RobotArchitect/Prefabs/TestCube.prefab`.
+The standalone project excludes inherited gameplay scenes, puzzle prefabs and
+pipes. Structural validation uses `Assets/RobotArchitect/Prefabs/TestCube.prefab`
+and requires no original project or legacy assets. The global scene list contains
+only `Assets/RobotArchitect/Scenes/RobotArchitect.unity`.
 
 ## Known import differences
 

@@ -16,8 +16,6 @@ public sealed class HandMenuController : MonoBehaviour
     [SerializeField] private Camera xrCamera;
     [Tooltip("The active XR Origin's Camera Offset, which contains tracking-space poses.")]
     [SerializeField] private Transform trackingSpace;
-    [Tooltip("Optional. Leave unassigned in scenes without puzzles; the restart button is hidden.")]
-    [SerializeField] private PuzzleGenerator puzzleGenerator;
     [SerializeField] private PassthroughController passthrough;
     [SerializeField] private MenuHand hand = MenuHand.Left;
 
@@ -26,7 +24,6 @@ public sealed class HandMenuController : MonoBehaviour
     [SerializeField] private Canvas menuCanvas;
     [SerializeField] private Button openButton;
     [SerializeField] private Button closeButton;
-    [SerializeField] private Button restartButton;
     [SerializeField] private Toggle passthroughToggle;
     [SerializeField] private TMP_Text passthroughLabel;
     [SerializeField] private PrototypeVolumeControl volumeControl;
@@ -109,14 +106,8 @@ public sealed class HandMenuController : MonoBehaviour
         menuCanvas.worldCamera = xrCamera;
         openButton.onClick.AddListener(OpenMenu);
         closeButton.onClick.AddListener(CloseMenu);
-        if (restartButton != null)
-        {
-            restartButton.gameObject.SetActive(puzzleGenerator != null);
-            if (puzzleGenerator != null) restartButton.onClick.AddListener(RestartPuzzle);
-        }
         passthroughToggle.onValueChanged.AddListener(SetPassthrough);
         passthrough.StateChanged += RefreshPassthrough;
-        if (puzzleGenerator != null) puzzleGenerator.PuzzleSpawned += HideAll;
         nextSubsystemSearch = 0f;
         RefreshPassthrough();
         if (enableControllerShortcut)
@@ -140,10 +131,8 @@ public sealed class HandMenuController : MonoBehaviour
         }
         if (openButton != null) openButton.onClick.RemoveListener(OpenMenu);
         if (closeButton != null) closeButton.onClick.RemoveListener(CloseMenu);
-        if (restartButton != null) restartButton.onClick.RemoveListener(RestartPuzzle);
         if (passthroughToggle != null) passthroughToggle.onValueChanged.RemoveListener(SetPassthrough);
         if (passthrough != null) passthrough.StateChanged -= RefreshPassthrough;
-        if (puzzleGenerator != null) puzzleGenerator.PuzzleSpawned -= HideAll;
         if (activeMenu == this) activeMenu = null;
         handSubsystem = null;
         HideAll();
@@ -326,13 +315,6 @@ public sealed class HandMenuController : MonoBehaviour
         openSource = OpenSource.None;
         if (wasController) { eligible = false; hasPose = false; conditionTime = 0f; }
         RefreshVisibility();
-    }
-
-    public void RestartPuzzle()
-    {
-        if (!isActiveAndEnabled || !IsMenuOpen || puzzleGenerator == null) return;
-        HideAll();
-        puzzleGenerator.RetryCurrentPuzzle();
     }
 
     private void SetPassthrough(bool value)

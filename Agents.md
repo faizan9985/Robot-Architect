@@ -1,4 +1,4 @@
-# XR_Capstone Codex Instructions
+# Robot Architect Codex Instructions
 
 Unity version:
 6000.3.23f1
@@ -7,7 +7,7 @@ Unity executable:
 C:\Program Files\Unity\Hub\Editor\6000.3.23f1\Editor\Unity.exe
 
 Project root:
-X:\Capstone\XR_Capstone
+X:\Capstone\Robot Architect
 
 Before making Unity-related changes:
 - Read PROJECT_CONTEXT.md
@@ -25,5 +25,5 @@ You may use the Unity CLI for:
 Example Unity CLI command:
 
 & "C:\Program Files\Unity\Hub\Editor\6000.3.23f1\Editor\Unity.exe" `
-  -projectPath "X:\Capstone\XR_Capstone"
+  -projectPath "X:\Capstone\Robot Architect"
   

@@ -1,9 +1,15 @@
-PROJECT CONTEXT — XR_Capstone
+Current project: `X:\Capstone\Robot Architect`.
+Open `Assets/RobotArchitect/Scenes/RobotArchitect.unity`; this is the only build scene.
+The following XR setup/debugging history explains the inherited working configuration.
+Historical test objects describe setup investigations; current content is documented
+in README.md. Preserve the working rig and Meta hand tracking configuration.
+
+PROJECT CONTEXT — Robot Architect
 
 Environment
 - Unity version: 6000.3.23f1 LTS
 - Project template: Universal 3D / SRP
-- Project name: XR_Capstone
+- Project name: Robot Architect
 - Target platform: Meta Quest
 - XR stack:
   - XR Interaction Toolkit 3.3.2
