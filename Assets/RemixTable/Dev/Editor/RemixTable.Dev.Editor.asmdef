@@ -1,0 +1,19 @@
+{
+    "name": "RemixTable.Dev.Editor",
+    "rootNamespace": "RemixTable.Dev.Editor",
+    "references": [
+        "RemixTable",
+        "RemixTable.Dev"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
