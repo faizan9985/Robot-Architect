@@ -1,0 +1,6 @@
+{
+  "name": "RemixTable.EditMode",
+  "references": ["RemixTable.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

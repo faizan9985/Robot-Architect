@@ -59,3 +59,13 @@ Assets/Real Stars Skybox/StarSkybox04Named/CubemapStarsNamed.cubemap
 # Legacy assets not required by Robot Architect
 /Assets/pipes/
 /Assets/pipes.meta
+
+# Local separation tools, virtual environment, model cache and Unity recovery scenes
+/.tools/
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
+# Local test music: redistribution rights have not been verified.
+# Preserve the .meta files for stable scene GUIDs and importer settings.
+/Assets/RemixTable/Audio/NIVIROTest.mp3
+/Assets/RemixTable/Audio/NIVIROTest/Stems/*.wav

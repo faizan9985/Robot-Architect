@@ -1,0 +1,5 @@
+{
+  "name": "RemixTable.PlayMode",
+  "references": ["RemixTable.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
