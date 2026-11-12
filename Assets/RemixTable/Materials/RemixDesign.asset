@@ -18,25 +18,33 @@ MonoBehaviour:
   - {r: 0.03, g: 0.85, b: 1, a: 1}
   - {r: 0.65, g: 0.18, b: 1, a: 1}
   emission: 1.8
-  width: 0.86
-  thickness: 0.007
-  spacing: 0.105
-  interactionRadius: 0.055
+  width: 0.64
+  thickness: 0.004
+  spacing: 0.09
+  interactionRadius: 0.032
   animationSpeed: 1
   highlight: 1.8
   maxSemitones: 12
   pitchDistance: 0.12
-  amplitude: 0.018
+  amplitude: 0.012
   minGain: 0
   maxGain: 2.5
+  resyncSpeed: 6
+  visibleSeconds: 8
   gainBoundaryFade: 0.06
   gainSmoothingSeconds: 0.025
   gainGestureSensitivity: 1
   gainDragDistance: 0.12
   gainDragDeadzone: 0.008
-  resyncSpeed: 6
-  visibleSeconds: 8
   segments: 128
   particleBudget: 24
   ribbonMaterial: {fileID: 2100000, guid: 5475df898e2a8954b8e3384e0b9dc8b2, type: 2}
-
+  panelWidth: 0.74
+  panelHeight: 0.4
+  laneHeight: 0.078
+  interactionDepth: 0.06
+  workspaceDistance: 0.62
+  workspaceEyeDrop: 0.2
+  transportGap: 0.015
+  transportHeight: 0.1
+  constrainToLanes: 1

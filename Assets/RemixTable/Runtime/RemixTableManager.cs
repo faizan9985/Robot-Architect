@@ -24,9 +24,8 @@ namespace RemixTable
             if (!anchored && Camera.main != null && Time.timeSinceLevelLoad > 1)
             {
                 var cam = Camera.main.transform;
-                var forward = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
-                if (forward.sqrMagnitude < .5f) forward = Vector3.forward;
-                workspace.SetPositionAndRotation(cam.position + forward * .7f + Vector3.down * .35f, Quaternion.LookRotation(forward));
+                var pose=design.SeatedPose(cam.position,cam.forward);
+                workspace.SetPositionAndRotation(pose.position,pose.rotation);
                 anchored = true;
             }
             // The audio manager owns the DSP timeline.

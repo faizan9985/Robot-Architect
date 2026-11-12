@@ -37,6 +37,13 @@ namespace RemixTable
         }
         public float Timestamp(float localX) => Mathf.Repeat((float)visualTime + localX / manager.design.width * manager.design.visibleSeconds, manager.clock.duration);
         public float LocalX(Vector3 world) => Mathf.Clamp(transform.InverseTransformPoint(world).x, -manager.design.width/2, manager.design.width/2);
+        public Bounds InteractionBounds => new Bounds(Vector3.zero,new Vector3(manager.design.width+.016f,manager.design.laneHeight,manager.design.interactionDepth));
+        public bool CanSelectAt(Vector3 world, out float distance)
+        {
+            var p=transform.InverseTransformPoint(world);var d=manager.design;
+            distance=new Vector2(p.y-HeightAt(p.x),p.z).magnitude;
+            return (!d.constrainToLanes || InteractionBounds.Contains(p)) && Mathf.Abs(p.x)<=d.width*.5f+.025f && distance<d.interactionRadius;
+        }
         public bool InRegion(float t) => wholeStem || (regionStart <= regionEnd ? t >= regionStart && t <= regionEnd : t >= regionStart || t <= regionEnd);
         public float HeightAt(float localX)
         {
@@ -45,8 +52,9 @@ namespace RemixTable
             float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
             float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
             float phase=(t*song.bpm/60f*d.animationSpeed+(int)stem*.37f+song.seed)*Mathf.PI*2;
-            return (Mathf.Sin(phase*(1+(int)stem*.5f))*.65f+Mathf.Sin(phase*2.17f)*.25f)*d.amplitude*gain
+            float height=(Mathf.Sin(phase*(1+(int)stem*.5f))*.65f+Mathf.Sin(phase*2.17f)*.25f)*d.amplitude*gain
                 +pitch/d.maxSemitones*d.pitchDistance+Mathf.Sin(phase*4)*effect*.008f;
+            return d.constrainToLanes ? Mathf.Clamp(height,-d.WaveCenterLimit,d.WaveCenterLimit) : height;
         }
         void LateUpdate()
         {
@@ -59,7 +67,7 @@ namespace RemixTable
                 float x = (i/(float)n-.5f)*d.width, t=Timestamp(x);
                 float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
                 float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
-                float y=HeightAt(x); if(manager.audioManager != null) y += Mathf.Sin(i*.35f)*manager.audioManager.Level(stem)*.006f*gain;
+                float y=HeightAt(x); if(manager.audioManager != null) y += Mathf.Clamp(Mathf.Sin(i*.35f)*manager.audioManager.Level(stem)*.006f*gain,-.003f,.003f);
                 float thick=d.thickness*(selected && InRegion(t)?1.8f:1);
                 vertices[i*2]=new Vector3(x,y-thick,0); vertices[i*2+1]=new Vector3(x,y+thick,0);
                 Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);

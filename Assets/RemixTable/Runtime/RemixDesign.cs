@@ -28,5 +28,20 @@ namespace RemixTable
         [Range(32,256)] public int segments = 128;
         public int particleBudget = 24;
         public Material ribbonMaterial;
+        [Header("Seated workspace (meters)")]
+        public float panelWidth = .74f, panelHeight = .40f;
+        public float laneHeight = .078f, interactionDepth = .06f;
+        public float workspaceDistance = .62f, workspaceEyeDrop = .20f;
+        public float transportGap = .015f, transportHeight = .10f;
+        public bool constrainToLanes;
+        public float TransportY => -panelHeight*.5f-transportGap-transportHeight*.5f;
+        public float LaneY(int row) => (1.5f-row)*spacing;
+        public float WaveCenterLimit => Mathf.Max(.001f,laneHeight*.5f-thickness*1.8f-.003f);
+        public Pose SeatedPose(Vector3 eye, Vector3 gaze)
+        {
+            var forward=Vector3.ProjectOnPlane(gaze,Vector3.up).normalized;
+            if(forward.sqrMagnitude<.5f) forward=Vector3.forward;
+            return new Pose(eye+forward*workspaceDistance-Vector3.up*workspaceEyeDrop,Quaternion.LookRotation(forward));
+        }
     }
 }

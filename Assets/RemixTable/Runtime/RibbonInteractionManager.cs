@@ -41,9 +41,7 @@ namespace RemixTable
                     foreach(var r in manager.ribbons)
                     {
                         if (r == null || !r.isActiveAndEnabled) continue;
-                        Vector3 p=r.transform.InverseTransformPoint(hands[h].position);
-                        float distance=new Vector2(p.y-r.HeightAt(p.x),p.z).magnitude;
-                        if(Mathf.Abs(p.x)<=manager.design.width/2+.025f && distance<best) {nearest=r;best=distance;}
+                        if(r.CanSelectAt(hands[h].position,out float distance) && distance<best) {nearest=r;best=distance;}
                     }
                     if(nearest!=null) { Begin(nearest,h);break; }
                 }
