@@ -1,0 +1,6 @@
+{
+  "name": "RemixTable.PlayMode",
+  "references": ["RemixTable.Runtime", "UnityEngine.UI", "Unity.TextMeshPro", "Unity.XR.Interaction.Toolkit"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
+
