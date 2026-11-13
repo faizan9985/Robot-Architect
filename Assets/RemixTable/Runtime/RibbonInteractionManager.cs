@@ -17,6 +17,9 @@ namespace RemixTable
         public enum GestureState { Idle, OneHandGain, TwoHandRegion }
         public GestureState State { get; private set; }
         public RibbonView ActiveRibbon => active;
+        // Live twist readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
+        public bool IsTwisting => active!=null && effectEdit!=null;
+        public float TwistEffect => effectEdit!=null ? effectEdit.value : 0;
         Vector3 firstPosition;
         AutomationEdit gainEdit, effectEdit;
         readonly HandSample[] hands = new HandSample[2];

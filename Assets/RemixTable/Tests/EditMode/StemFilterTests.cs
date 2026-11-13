@@ -21,6 +21,27 @@ namespace RemixTable.Tests
             Assert.Less(StemFilter.LowpassCutoff(-.6f),StemFilter.LowpassCutoff(-.3f));
             Assert.Greater(StemFilter.HighpassCutoff(.6f),StemFilter.HighpassCutoff(.3f));
         }
+        // Regression: clockwise (high-pass) felt dead because it stayed under ~170 Hz at a 45° twist.
+        // From a 30° twist (1/3 of the default 90° sweep), each direction must reach the band where
+        // vocals/drums/melody audibly change: high-pass above ~300 Hz, low-pass below ~5 kHz.
+        [TestCase(.334f)] [TestCase(.5f)] [TestCase(.67f)] [TestCase(1f)]
+        public void BothDirectionsBecomeAudibleAtTheSameTwist(float amount)
+        {
+            Assert.GreaterOrEqual(StemFilter.HighpassCutoff(amount),300f,$"high-pass too weak at {amount}");
+            Assert.LessOrEqual(StemFilter.LowpassCutoff(-amount),5000f,$"low-pass too weak at {amount}");
+        }
+        [Test] public void HalfTwistHighpassThinsMoreThanJustSubBass()
+        {
+            Assert.GreaterOrEqual(StemFilter.HighpassCutoff(.5f),500f);
+            Assert.LessOrEqual(StemFilter.LowpassCutoff(-.5f),3000f);
+        }
+        [Test] public void TransportShowsTwistDirectionAndStrength()
+        {
+            Assert.AreEqual("LOW 50%  ",RemixTransport.FilterLabel(-50,true));
+            Assert.AreEqual("HIGH 40%  ",RemixTransport.FilterLabel(40,true));
+            Assert.AreEqual("EDIT  ",RemixTransport.FilterLabel(0,true));
+            Assert.AreEqual("",RemixTransport.FilterLabel(0,false));
+        }
         [Test] public void InvalidValuesAreClampedOrNeutral()
         {
             Assert.AreEqual(0,StemFilter.SafeEffect(float.NaN));
