@@ -20,10 +20,16 @@ namespace RemixTable
         // Live twist readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
         public bool IsTwisting => active!=null && effectEdit!=null;
         public float TwistEffect => effectEdit!=null ? effectEdit.value : 0;
+        // Live lift readout: the gain being written by this hold.
+        public bool IsLifting => active!=null && gainEdit!=null;
+        public float LiftGain => gainEdit!=null ? gainEdit.value : 1;
         Vector3 firstPosition;
         AutomationEdit gainEdit, effectEdit;
         readonly HandSample[] hands = new HandSample[2];
-        public struct HandSample { public bool valid, pinch; public Vector3 position; public float roll; public bool rollValid; }
+        // position = pinch point (selection, regions). wrist = lift reference: it sits on the forearm's
+        // roll axis, so twisting does not move it, which lets lift and twist run together in one hold.
+        public struct HandSample { public bool valid, pinch; public Vector3 position; public float roll; public bool rollValid; public Vector3 wrist; public bool wristValid; }
+        static Vector3 LiftPoint(HandSample hand) => hand.wristValid ? hand.wrist : hand.position;
         void Update()
         {
             SubsystemManager.GetSubsystems(systems);
@@ -83,12 +89,14 @@ namespace RemixTable
                 if(endpointHold>.65f && !active.wholeStem) {active.wholeStem=true;gainEdit=effectEdit=null;RebaseGain();}
             }
             else endpoint=false;
-            float displacement=local.y-startY;
+            // Lift and twist are independent channels. Each wakes up once it clears its own dead zone and then
+            // keeps tracking for the rest of the hold, so both can be adjusted freely and simultaneously.
+            float displacement=active.transform.InverseTransformPoint(LiftPoint(primary)).y-startY;
             if(primary.rollValid && previousRollValid) accumulatedRoll+=Mathf.DeltaAngle(previousRoll,primary.roll);
             previousRoll=primary.roll;previousRollValid=primary.rollValid;
-            if(Mathf.Abs(displacement)>manager.design.gainDragDeadzone || gainEdit!=null)
+            if(gainEdit!=null || Mathf.Abs(displacement)>manager.design.gainDragDeadzone)
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
-            else if(primary.rollValid && Mathf.Abs(accumulatedRoll)>10)
+            if(effectEdit!=null || (primary.rollValid && Mathf.Abs(accumulatedRoll)>manager.design.twistDeadzoneDegrees))
                 Write(ref effectEdit,ParameterType.Effect,manager.design.MapTwistEffect(initialEffect,accumulatedRoll));
         }
         HandSample Read(XRHand hand,bool wasPinching)
@@ -101,6 +109,8 @@ namespace RemixTable
             {
                 sample.roll=(tracking!=null?tracking.rotation*wrist.rotation:wrist.rotation).eulerAngles.z;
                 sample.rollValid=true;
+                sample.wrist=tracking!=null?tracking.TransformPoint(wrist.position):wrist.position;
+                sample.wristValid=true;
             }
             return sample;
         }
@@ -112,7 +122,7 @@ namespace RemixTable
         void RebaseGain()
         {
             State=GestureState.OneHandGain;
-            startY=active.transform.InverseTransformPoint(hands[owner].position).y;
+            startY=active.transform.InverseTransformPoint(LiftPoint(hands[owner])).y;
             initialGain=gainEdit!=null ? AutomationStore.SafeGain(gainEdit.value) : Value(ParameterType.Gain);
             previousRoll=hands[owner].roll;previousRollValid=hands[owner].rollValid;accumulatedRoll=0;initialEffect=Value(ParameterType.Effect);effectEdit=null;
         }

@@ -17,6 +17,8 @@ namespace RemixTable
         [Header("Twist filter")]
         [Tooltip("Wrist roll (degrees) for a full low-pass or high-pass sweep from neutral.")]
         [Min(10)] public float filterTwistDegrees = 90;
+        [Tooltip("Wrist roll (degrees) ignored before the filter starts following a twist.")]
+        [Min(0)] public float twistDeadzoneDegrees = 10;
         [Tooltip("Flip if twisting right muffles instead of brightens on device.")]
         public bool invertFilterTwist;
         public float MapTwistEffect(float initial, float accumulatedRollDegrees) =>

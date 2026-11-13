@@ -37,10 +37,13 @@ namespace RemixTable.Tests
         }
         [Test] public void TransportShowsTwistDirectionAndStrength()
         {
-            Assert.AreEqual("LOW 50%  ",RemixTransport.FilterLabel(-50,true));
-            Assert.AreEqual("HIGH 40%  ",RemixTransport.FilterLabel(40,true));
-            Assert.AreEqual("EDIT  ",RemixTransport.FilterLabel(0,true));
-            Assert.AreEqual("",RemixTransport.FilterLabel(0,false));
+            Assert.AreEqual("LOW 50%",RemixTransport.GestureLabel(null,-50));
+            Assert.AreEqual("HIGH 40%",RemixTransport.GestureLabel(null,40));
+            Assert.AreEqual("FLAT",RemixTransport.GestureLabel(null,0));
+            Assert.AreEqual("VOL 120%",RemixTransport.GestureLabel(120,null));
+            Assert.AreEqual("VOL 120%  HIGH 40%",RemixTransport.GestureLabel(120,40));
+            Assert.AreEqual("",RemixTransport.GestureLabel(null,null));
+            Assert.LessOrEqual(RemixTransport.GestureLabel(250,-100).Length,24,"fits the 210px time slot");
         }
         [Test] public void InvalidValuesAreClampedOrNeutral()
         {
