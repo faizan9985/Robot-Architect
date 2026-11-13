@@ -79,7 +79,7 @@ namespace RemixTable
         public void ResetStem(string song, StemId stem) => edits.RemoveAll(x => x.songId == song && x.stem == stem);
         public void ResetSong(string song) => edits.RemoveAll(x => x.songId == song);
     }
-    [Serializable] public class StemMetadata { public StemId id; public string label; public AudioClip clip; }
+    [Serializable] public class StemMetadata { public StemId id; public string label; public AudioClip clip; public WaveformCache waveform; }
     [Serializable] public class SongMetadata
     {
         public string id, title;

@@ -37,6 +37,8 @@ MonoBehaviour:
   gainDragDistance: 0.12
   gainDragDeadzone: 0.008
   segments: 128
+  waveformColumns: 512
+  waveformBaseline: 0.00035
   particleBudget: 24
   ribbonMaterial: {fileID: 2100000, guid: 5475df898e2a8954b8e3384e0b9dc8b2, type: 2}
   panelWidth: 0.74

@@ -1,5 +1,7 @@
 # Adjustable timeline zoom
 
+Waveform rendering now uses zoom-adaptive audio peak caches and 512 fixed columns per lane. See [AUDIO_WAVEFORMS.md](AUDIO_WAVEFORMS.md) for current geometry and memory budgets; earlier 128-segment rendering references below are historical. Zoom controls and gesture arbitration remain unchanged.
+
 The saved RemixTable scene starts at Normal: eight seconds across the arc, four seconds on each side of the current audio timestamp. Detail = 4 seconds, Normal = 8, Wide = 16, Overview = 32. These values change the time mapping only. Radius (0.8 m), arc angle (180 degrees), lane spacing (9 cm), world anchor, transport and central playhead stay fixed.
 
 ## Shared mapping and smoothing

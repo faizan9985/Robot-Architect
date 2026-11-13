@@ -1,5 +1,7 @@
 # Curved seated timeline
 
+Audio-derived waveforms supersede the historical synthesized display and 128-segment geometry budget below. See [AUDIO_WAVEFORMS.md](AUDIO_WAVEFORMS.md) for signed peak caches, 512-column envelopes, gain mapping and stable baseline selection. Arc placement and time direction remain unchanged.
+
 Adjustable zoom now controls the symmetric runtime time window. Normal remains 4 seconds past / 4 seconds future; see [TIMELINE_ZOOM.md](TIMELINE_ZOOM.md) for the authoritative zoom mapping, presets and edit deferral. The historical design past/future fields below remain for compatibility.
 
 The existing RemixTable scene uses a procedural four-lane cylindrical timeline. The XR rig, hand tracking, passthrough, audio clips, automation store, and DSP transport remain in place. RobotArchitect.unity is outside this change.

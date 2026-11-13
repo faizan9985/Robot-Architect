@@ -17,8 +17,10 @@ namespace RemixTable.Tests
             var clip=AudioClip.Create("two second tone",96000,1,48000,false);
             var data=new float[96000];for(int i=0;i<data.Length;i++)data[i]=Mathf.Sin(i*2*Mathf.PI*220/48000)*.25f;
             clip.SetData(data,0);
+            var waveform=ScriptableObject.CreateInstance<WaveformCache>();
+            waveform.Initialize(48000,96000,96000,.25f/32767,new byte[]{1,128,255,127,130,90},new[]{0},new[]{1});
             var song=new SongMetadata{id="region",stems=new StemMetadata[4]};
-            for(int i=0;i<4;i++){audio.sources[i]=root.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip};}
+            for(int i=0;i<4;i++){audio.sources[i]=root.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip,waveform=waveform};}
             var ribbonObject=new GameObject("gain ribbon");ribbonObject.transform.SetParent(root.transform);
             var ribbon=ribbonObject.AddComponent<RibbonView>();ribbon.manager=manager;ribbon.stem=StemId.Bass;
             manager.library.songs=new[]{song,new SongMetadata{id="different",stems=song.stems}};
@@ -29,11 +31,11 @@ namespace RemixTable.Tests
             Assert.That(audio.sources[1].volume,Is.EqualTo(audio.headroom*.25f).Within(.001));
             for(int i=0;i<4;i++)if(i!=1)Assert.That(audio.sources[i].volume,Is.EqualTo(audio.headroom).Within(.001));
             ribbon.SetSelected(true);double paused=manager.clock.elapsed;
-            yield return null;float height=ribbon.HeightAt(0);
+            yield return null;float peak=ribbon.EnvelopeAt(0,.01f).maximum;Assert.Greater(peak,0);
             edit.value=.5f;manager.automation.Upsert(edit);
             yield return new WaitForSeconds(.2f);
             Assert.AreEqual(paused,manager.clock.elapsed);
-            Assert.That(ribbon.HeightAt(0),Is.EqualTo(height*2).Within(.00001));
+            Assert.That(ribbon.EnvelopeAt(0,.01f).maximum,Is.EqualTo(peak*2).Within(.00001));
             Assert.That(audio.sources[1].volume,Is.EqualTo(audio.headroom*.5f).Within(.001));
             ribbon.SetSelected(false);Assert.AreEqual(paused,manager.clock.elapsed);
             yield return new WaitForSeconds(.4f);
@@ -48,7 +50,7 @@ namespace RemixTable.Tests
             manager.library.Select(0);audio.Load(song);
             yield return new WaitForSeconds(.6f);Assert.That(audio.sources[1].volume,Is.EqualTo(audio.headroom*.5f).Within(.001));
             Assert.AreEqual(1,manager.automation.edits.Count);
-            Object.Destroy(root);Object.Destroy(clip);Object.Destroy(design);yield return null;
+            Object.Destroy(root);Object.Destroy(clip);Object.Destroy(waveform);Object.Destroy(design);yield return null;
         }
         [UnityTest] public IEnumerator EditingOwnersFreezeAllRibbonsAndRespectManualPause()
         {
@@ -79,7 +81,9 @@ namespace RemixTable.Tests
                 float before=first.HeightAt(0);
                 manager.automation.Upsert(new AutomationEdit{songId="edit",stem=StemId.Drums,wholeStem=true,parameter=ParameterType.Pitch,value=7+session});
                 yield return new WaitForSeconds(.1f);
-                Assert.IsTrue(first.selected);Assert.AreNotEqual(before,first.HeightAt(0));
+                // Silent source / missing cache stays flat; legacy pitch records cannot fabricate audio peaks.
+                Assert.IsTrue(first.selected);Assert.AreEqual(before,first.HeightAt(0));
+                Assert.AreEqual(0,first.EnvelopeAt(0,.01f).maximum);
                 Assert.AreEqual(paused,manager.clock.elapsed);
                 foreach(var ribbon in manager.ribbons)Assert.AreEqual(paused,ribbon.visualTime);
                 second.SetSelected(true);first.SetSelected(false);

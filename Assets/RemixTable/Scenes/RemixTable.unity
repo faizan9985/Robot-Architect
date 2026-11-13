@@ -12503,15 +12503,19 @@ MonoBehaviour:
     - id: 0
       label: drums
       clip: {fileID: 8300000, guid: 6288d6ee0451fca40b5f8d64dc03692d, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 8fdd3058e0fb1c04495b1f46d80e0272, type: 3}
     - id: 1
       label: bass
       clip: {fileID: 8300000, guid: 861277279c90939409244b32b957a852, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 77861eebfde7b814ca6c7c75e8f2b4e5, type: 3}
     - id: 2
       label: other
       clip: {fileID: 8300000, guid: 1323cd6920e803c4d8a6032155a570ea, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 052019de355b65a49ad46745c7bb026a, type: 3}
     - id: 3
       label: vocals
       clip: {fileID: 8300000, guid: aa36c84e33978424ca8fb295102e0b20, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 062db725c97a7664581afe73070e8650, type: 3}
   - id: glass-orbit
     title: GLASS ORBIT
     duration: 40
@@ -12521,15 +12525,19 @@ MonoBehaviour:
     - id: 0
       label: Drums
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 1
       label: Bass
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 2
       label: Melody
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 3
       label: Vocals
       clip: {fileID: 0}
+      waveform: {fileID: 0}
   - id: violet-dawn
     title: VIOLET DAWN
     duration: 48
@@ -12539,15 +12547,19 @@ MonoBehaviour:
     - id: 0
       label: Drums
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 1
       label: Bass
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 2
       label: Melody
       clip: {fileID: 0}
+      waveform: {fileID: 0}
     - id: 3
       label: Vocals
       clip: {fileID: 0}
+      waveform: {fileID: 0}
   selectedIndex: 0
 --- !u!4 &1747873706
 Transform:

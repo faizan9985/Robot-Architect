@@ -3,11 +3,10 @@ Shader "RemixTable/RibbonEnergy"
     Properties { _BaseColor("Tint", Color) = (1,1,1,1) }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent" "RenderType"="Transparent" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" "RenderType"="Opaque" }
         Pass
         {
-            Blend SrcAlpha One
-            ZWrite Off
+            ZWrite On
             Cull Off
             HLSLPROGRAM
             #pragma vertex vert
@@ -31,10 +30,7 @@ Shader "RemixTable/RibbonEnergy"
             }
             half4 frag(Varyings input):SV_Target
             {
-                half edge=abs(input.uv.y*2-1);
-                half halo=1-smoothstep(.15h,1.h,edge);
-                half core=1-smoothstep(0.h,.25h,edge);
-                return half4(input.color.rgb*(.6h+core*.7h),saturate(input.color.a)*halo);
+                return half4(input.color.rgb,1);
             }
             ENDHLSL
         }

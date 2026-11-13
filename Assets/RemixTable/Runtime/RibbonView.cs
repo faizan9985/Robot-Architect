@@ -12,6 +12,20 @@ namespace RemixTable
         Mesh mesh;
         Vector3[] vertices;
         Color[] colors;
+        SongMetadata cachedSong;
+        WaveformCache waveform;
+        public int ColumnCount => vertices == null ? 0 : vertices.Length/4;
+        public Mesh WaveformMesh => mesh;
+        WaveformCache CurrentWaveform()
+        {
+            var song=manager.library.Current;
+            if(!ReferenceEquals(song,cachedSong))
+            {
+                cachedSong=song;waveform=null;
+                if(song.stems!=null) foreach(var data in song.stems) if(data.id==stem) { waveform=data.waveform;break; }
+            }
+            return waveform;
+        }
         public void SetSelected(bool value)
         {
             selected = value;
@@ -24,13 +38,16 @@ namespace RemixTable
         void OnDisable() => SetSelected(false);
         void Awake()
         {
-            int n = manager.design.segments;
-            mesh = new Mesh { name = stem + " procedural ribbon" }; mesh.MarkDynamic();
-            vertices = new Vector3[(n + 1) * 2]; colors = new Color[vertices.Length];
+            int n = Mathf.Clamp(manager.design.waveformColumns,128,512);
+            mesh = new Mesh { name = stem + " audio waveform" }; mesh.MarkDynamic();
+            vertices = new Vector3[n * 4]; colors = new Color[vertices.Length];
             var uv = new Vector2[vertices.Length];
-            for(int i=0;i<=n;i++) { uv[i*2]=new Vector2(i/(float)n,0);uv[i*2+1]=new Vector2(i/(float)n,1); }
             var triangles = new int[n * 6];
-            for (int i = 0; i < n; i++) { int k=i*6,v=i*2; triangles[k]=v;triangles[k+1]=v+2;triangles[k+2]=v+1;triangles[k+3]=v+1;triangles[k+4]=v+2;triangles[k+5]=v+3; }
+            for (int i = 0; i < n; i++)
+            {
+                int k=i*6,v=i*4; triangles[k]=v;triangles[k+1]=v+2;triangles[k+2]=v+1;triangles[k+3]=v+1;triangles[k+4]=v+2;triangles[k+5]=v+3;
+                uv[v]=new Vector2(0,0);uv[v+1]=new Vector2(0,1);uv[v+2]=new Vector2(1,0);uv[v+3]=new Vector2(1,1);
+            }
             mesh.vertices = vertices; mesh.triangles = triangles; mesh.uv=uv;
             mesh.bounds = new Bounds(new Vector3(0,0,-manager.design.Radius), new Vector3(4,2,4));
             GetComponent<MeshFilter>().sharedMesh = mesh;
@@ -58,38 +75,45 @@ namespace RemixTable
             return (!d.constrainToLanes || InteractionBounds.Contains(p)) && Mathf.Abs(p.x)<=d.width*.5f+.025f && distance<d.interactionRadius;
         }
         public bool InRegion(float t) => wholeStem || (regionStart <= regionEnd ? t >= regionStart && t <= regionEnd : t >= regionStart || t <= regionEnd);
-        public float HeightAt(float localX)
+        // Editing always targets the stable cylindrical lane baseline, including silence.
+        public float HeightAt(float localX) => 0;
+        public WaveformCache.Envelope EnvelopeAt(float coordinate,float span)
         {
-            var d=manager.design;var song=manager.library.Current;float t=Timestamp(localX);
-            float pitch=manager.automation.Evaluate(song.id,stem,ParameterType.Pitch,t,manager.clock.duration);
-            float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
-            float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
-            float phase=(t*song.bpm/60f*d.animationSpeed+(int)stem*.37f+song.seed)*Mathf.PI*2;
-            float height=(Mathf.Sin(phase*(1+(int)stem*.5f))*.65f+Mathf.Sin(phase*2.17f)*.25f)*d.amplitude*gain
-                +pitch/d.maxSemitones*d.pitchDistance+Mathf.Sin(phase*4)*effect*.008f;
-            return d.constrainToLanes ? Mathf.Clamp(height,-d.WaveCenterLimit,d.WaveCenterLimit) : height;
+            var cache=CurrentWaveform();
+            if(cache==null) return default; // Missing/placeholder audio is flat, never synthesized.
+            var result=cache.Query(Timestamp(coordinate),span);
+            float gain=manager.automation.EvaluateGain(manager.library.Current.id,stem,Timestamp(coordinate),manager.clock.duration,manager.design.gainBoundaryFade);
+            result.minimum*=gain;result.maximum*=gain;result.rms*=gain;
+            return result;
         }
-        void LateUpdate()
+        void LateUpdate() => UpdateWaveform();
+        public void UpdateWaveform()
         {
             var d = manager.design;
             visualTime = manager.clock.elapsed;
-            int n = vertices.Length/2-1;
+            int n = ColumnCount;
             var song = manager.library.Current;
-            for (int i=0;i<=n;i++)
+            float span=(d.curvedTimeline?manager.zoom.VisibleSeconds:d.visibleSeconds)/n;
+            float heightLimit=d.laneHeight*.5f-.003f;
+            for (int i=0;i<n;i++)
             {
                 float x = (i/(float)n-.5f)*d.width, t=Timestamp(x);
                 float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
                 float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
-                float y=HeightAt(x); if(manager.audioManager != null) y += Mathf.Clamp(Mathf.Sin(i*.35f)*manager.audioManager.Level(stem)*.006f*gain,-.003f,.003f);
-                float thick=d.thickness*(selected && InRegion(t)?1.8f:1);
-                vertices[i*2]=d.ArcPoint(x,y-thick); vertices[i*2+1]=d.ArcPoint(x,y+thick);
+                var envelope=EnvelopeAt(x,span);
+                float low=Mathf.Max(-heightLimit,d.WaveformHeight(Mathf.Min(0,envelope.minimum))-d.waveformBaseline);
+                float high=Mathf.Min(heightLimit,d.WaveformHeight(Mathf.Max(0,envelope.maximum))+d.waveformBaseline);
+                int v=i*4;float right=x+d.width/n;
+                vertices[v]=d.ArcPoint(x,low); vertices[v+1]=d.ArcPoint(x,high);
+                vertices[v+2]=d.ArcPoint(right,low); vertices[v+3]=d.ArcPoint(right,high);
                 Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 if(d.curvedTimeline && Mathf.Abs(x/d.width*d.arcAngle)>d.interactiveAngle*.5f) c*=.45f;
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
-                colors[i*2]=colors[i*2+1]=c;
+                colors[v]=colors[v+1]=colors[v+2]=colors[v+3]=c;
             }
-            mesh.vertices=vertices;mesh.colors=colors;
+            mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
+            mesh.SetColors(colors);
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }
