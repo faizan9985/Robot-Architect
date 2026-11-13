@@ -9,7 +9,7 @@ namespace RemixTable
         public Button previousSong, playPause, nextSong;
         public TMP_Text songTitle, playbackTime, playPauseLabel;
         public TMP_Text palmInstructions;
-        public const string Guidance="PINCH + LIFT / GAIN\nTWO HANDS / REGION\nTWIST / VISUAL ONLY (EXPERIMENTAL)\nHOLD ENDPOINT / WHOLE STEM";
+        public const string Guidance="PINCH + LIFT / GAIN\nTWO HANDS / REGION\nTWIST / FILTER SWEEP\nHOLD ENDPOINT / WHOLE STEM";
         int displayedSecond=-1;
         bool displayedManual, displayedEditing, displayedReady;
         bool dirty=true;

@@ -52,8 +52,10 @@ namespace RemixTable
             float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
             float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
             float phase=(t*song.bpm/60f*d.animationSpeed+(int)stem*.37f+song.seed)*Mathf.PI*2;
-            float height=(Mathf.Sin(phase*(1+(int)stem*.5f))*.65f+Mathf.Sin(phase*2.17f)*.25f)*d.amplitude*gain
-                +pitch/d.maxSemitones*d.pitchDistance+Mathf.Sin(phase*4)*effect*.008f;
+            // Low-pass smooths the wave (drops its harmonic); high-pass adds fast jitter.
+            float lp=Mathf.Max(0,-effect),hp=Mathf.Max(0,effect);
+            float height=(Mathf.Sin(phase*(1+(int)stem*.5f))*.65f+Mathf.Sin(phase*2.17f)*.25f*(1-lp))*d.amplitude*gain
+                +pitch/d.maxSemitones*d.pitchDistance+Mathf.Sin(phase*6)*hp*.008f;
             return d.constrainToLanes ? Mathf.Clamp(height,-d.WaveCenterLimit,d.WaveCenterLimit) : height;
         }
         void LateUpdate()
@@ -70,7 +72,8 @@ namespace RemixTable
                 float y=HeightAt(x); if(manager.audioManager != null) y += Mathf.Clamp(Mathf.Sin(i*.35f)*manager.audioManager.Level(stem)*.006f*gain,-.003f,.003f);
                 float thick=d.thickness*(selected && InRegion(t)?1.8f:1);
                 vertices[i*2]=new Vector3(x,y-thick,0); vertices[i*2+1]=new Vector3(x,y+thick,0);
-                Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
+                // Muffled = darker, bright = whiter.
+                Color c=effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
                 colors[i*2]=colors[i*2+1]=c;

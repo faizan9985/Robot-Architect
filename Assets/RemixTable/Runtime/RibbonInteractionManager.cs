@@ -86,7 +86,7 @@ namespace RemixTable
             if(Mathf.Abs(displacement)>manager.design.gainDragDeadzone || gainEdit!=null)
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
             else if(primary.rollValid && Mathf.Abs(accumulatedRoll)>10)
-                Write(ref effectEdit,ParameterType.Effect,Mathf.Clamp01(initialEffect+accumulatedRoll/180f));
+                Write(ref effectEdit,ParameterType.Effect,manager.design.MapTwistEffect(initialEffect,accumulatedRoll));
         }
         HandSample Read(XRHand hand,bool wasPinching)
         {

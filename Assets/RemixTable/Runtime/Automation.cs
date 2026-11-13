@@ -24,6 +24,7 @@ namespace RemixTable
         public void Upsert(AutomationEdit edit)
         {
             if(edit.parameter==ParameterType.Gain) edit.value=SafeGain(edit.value);
+            else if(edit.parameter==ParameterType.Effect) edit.value=StemFilter.SafeEffect(edit.value);
             int index = edits.FindIndex(x => x.id == edit.id);
             if (index >= 0) edits.RemoveAt(index);
             edits.Add(edit); // Last committed/updated edit has priority.

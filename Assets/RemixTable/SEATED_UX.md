@@ -54,7 +54,7 @@ The existing XRI UI-interactor registration creates the one runtime EventSystem/
 
 The existing left palm canvas contains the new static guidance. Its panel is 360 x 430 canvas units at the inherited 0.00085 scale (0.306 x 0.3655 m). Passthrough toggle, volume slider, close/open controls, references and the HandMenuController script are preserved; controls are repositioned to fit the guidance without overlap. Instructions inherit the menu's existing visibility. The main workspace has no active gesture instructions.
 
-Guidance: PINCH + LIFT / GAIN; TWO HANDS / REGION; TWIST / VISUAL ONLY (EXPERIMENTAL); HOLD ENDPOINT / WHOLE STEM. Gain and 0.65-second endpoint whole-stem editing are implemented and tested. Twist remains a visual preview, not audible effect DSP. Existing stored pitch records remain readable; no new pitch gesture is introduced.
+Guidance: PINCH + LIFT / GAIN; TWO HANDS / REGION; TWIST / FILTER SWEEP; HOLD ENDPOINT / WHOLE STEM. Gain and 0.65-second endpoint whole-stem editing are implemented and tested. Twist remains a visual preview, not audible effect DSP. Existing stored pitch records remain readable; no new pitch gesture is introduced.
 
 ## Performance and checks
 
