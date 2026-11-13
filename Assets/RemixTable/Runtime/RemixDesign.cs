@@ -28,9 +28,19 @@ namespace RemixTable
         [Range(32,256)] public int segments = 128;
         [Header("Audio waveform")]
         [Range(128,512)] public int waveformColumns = 512;
-        [Min(.0001f)] public float waveformBaseline = .00035f;
+        [Tooltip("Minimum ribbon half-thickness in meters, excluding the glow fringe.")]
+        [Min(.0001f)] public float waveformBaseline = .0006f;
+        [Min(0)] public float waveformAmplitudeScale = 1;
+        [Range(0,1)] public float waveformSmoothing = .7f;
+        [Range(0,1)] public float waveformPeakPreservation = .85f;
+        [Range(0,2)] public float waveformGlow = .35f;
+        [Range(0,1)] public float waveformMotion = .25f;
         // One monotonic signed soft bound for all stems/regions, including float WAV peaks >1.
-        public float WaveformHeight(float amplitude) => amplitude / (1+Mathf.Abs(amplitude)) * Mathf.Max(0,laneHeight*.5f-.003f-waveformBaseline);
+        public float WaveformHeight(float amplitude)
+        {
+            amplitude*=Mathf.Max(0,waveformAmplitudeScale);
+            return amplitude / (1+Mathf.Abs(amplitude)) * Mathf.Max(0,laneHeight*.5f-.006f-waveformBaseline);
+        }
         public int particleBudget = 24;
         public Material ribbonMaterial;
         [Header("Seated workspace (meters)")]

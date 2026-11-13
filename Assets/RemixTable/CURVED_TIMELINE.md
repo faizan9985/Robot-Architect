@@ -1,5 +1,7 @@
 # Curved seated timeline
 
+The current renderer uses smooth, audio-derived holographic ribbons; see [HOLOGRAPHIC_RIBBONS.md](HOLOGRAPHIC_RIBBONS.md). Spatial placement and interaction coordinates below remain unchanged.
+
 Audio-derived waveforms supersede the historical synthesized display and 128-segment geometry budget below. See [AUDIO_WAVEFORMS.md](AUDIO_WAVEFORMS.md) for signed peak caches, 512-column envelopes, gain mapping and stable baseline selection. Arc placement and time direction remain unchanged.
 
 Adjustable zoom now controls the symmetric runtime time window. Normal remains 4 seconds past / 4 seconds future; see [TIMELINE_ZOOM.md](TIMELINE_ZOOM.md) for the authoritative zoom mapping, presets and edit deferral. The historical design past/future fields below remain for compatibility.

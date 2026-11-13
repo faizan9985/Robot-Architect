@@ -12,9 +12,14 @@ namespace RemixTable
         Mesh mesh;
         Vector3[] vertices;
         Color[] colors;
+        Vector4[] edgeData;
+        WaveformCache.Envelope[] rawEnvelope, smoothEnvelope;
+        int columns;
+        public const int CurveSubdivisions=4;
         SongMetadata cachedSong;
         WaveformCache waveform;
-        public int ColumnCount => vertices == null ? 0 : vertices.Length/4;
+        public int ColumnCount => columns;
+        public int CurveSegmentCount => columns*CurveSubdivisions;
         public Mesh WaveformMesh => mesh;
         WaveformCache CurrentWaveform()
         {
@@ -38,16 +43,19 @@ namespace RemixTable
         void OnDisable() => SetSelected(false);
         void Awake()
         {
-            int n = Mathf.Clamp(manager.design.waveformColumns,128,512);
+            columns = Mathf.Clamp(manager.design.waveformColumns,128,512);
+            int n=CurveSegmentCount;
             mesh = new Mesh { name = stem + " audio waveform" }; mesh.MarkDynamic();
-            vertices = new Vector3[n * 4]; colors = new Color[vertices.Length];
+            vertices = new Vector3[(n+1)*2]; colors = new Color[vertices.Length];
+            edgeData=new Vector4[vertices.Length];
+            rawEnvelope=new WaveformCache.Envelope[columns+8];smoothEnvelope=new WaveformCache.Envelope[columns+8];
             var uv = new Vector2[vertices.Length];
             var triangles = new int[n * 6];
             for (int i = 0; i < n; i++)
             {
-                int k=i*6,v=i*4; triangles[k]=v;triangles[k+1]=v+2;triangles[k+2]=v+1;triangles[k+3]=v+1;triangles[k+4]=v+2;triangles[k+5]=v+3;
-                uv[v]=new Vector2(0,0);uv[v+1]=new Vector2(0,1);uv[v+2]=new Vector2(1,0);uv[v+3]=new Vector2(1,1);
+                int k=i*6,v=i*2; triangles[k]=v;triangles[k+1]=v+2;triangles[k+2]=v+1;triangles[k+3]=v+1;triangles[k+4]=v+2;triangles[k+5]=v+3;
             }
+            for(int i=0;i<=n;i++) { uv[i*2]=new Vector2(i/(float)n,0);uv[i*2+1]=new Vector2(i/(float)n,1); }
             mesh.vertices = vertices; mesh.triangles = triangles; mesh.uv=uv;
             mesh.bounds = new Bounds(new Vector3(0,0,-manager.design.Radius), new Vector3(4,2,4));
             GetComponent<MeshFilter>().sharedMesh = mesh;
@@ -91,29 +99,48 @@ namespace RemixTable
         {
             var d = manager.design;
             visualTime = manager.clock.elapsed;
-            int n = ColumnCount;
+            int n = CurveSegmentCount;
             var song = manager.library.Current;
-            float span=(d.curvedTimeline?manager.zoom.VisibleSeconds:d.visibleSeconds)/n;
+            double window=d.curvedTimeline?manager.zoom.VisibleSeconds:d.visibleSeconds;
+            double step=window/columns;
+            double start=visualTime%manager.clock.duration-window*.5;
+            double first=System.Math.Floor(start/step-.5);
+            var cache=CurrentWaveform();
+            // Knots are anchored in song time, not screen columns: stable flow while scrolling.
+            for(int i=0;i<rawEnvelope.Length;i++)
+                rawEnvelope[i]=cache==null?default:cache.Query((first+i-2)*step,step);
+            for(int i=2;i<smoothEnvelope.Length-2;i++) smoothEnvelope[i]=RibbonEnvelope.Smooth(rawEnvelope,i,d);
             float heightLimit=d.laneHeight*.5f-.003f;
-            for (int i=0;i<n;i++)
+            for (int i=0;i<=n;i++)
             {
                 float x = (i/(float)n-.5f)*d.width, t=Timestamp(x);
                 float effect=manager.automation.Evaluate(song.id,stem,ParameterType.Effect,t,manager.clock.duration);
                 float gain=manager.automation.EvaluateGain(song.id,stem,t,manager.clock.duration,d.gainBoundaryFade);
-                var envelope=EnvelopeAt(x,span);
-                float low=Mathf.Max(-heightLimit,d.WaveformHeight(Mathf.Min(0,envelope.minimum))-d.waveformBaseline);
-                float high=Mathf.Min(heightLimit,d.WaveformHeight(Mathf.Max(0,envelope.maximum))+d.waveformBaseline);
-                int v=i*4;float right=x+d.width/n;
-                vertices[v]=d.ArcPoint(x,low); vertices[v+1]=d.ArcPoint(x,high);
-                vertices[v+2]=d.ArcPoint(right,low); vertices[v+3]=d.ArcPoint(right,high);
+                double coordinate=(start+window*i/n)/step-.5-first;
+                int knot=(int)System.Math.Floor(coordinate)+2;float fraction=(float)(coordinate-System.Math.Floor(coordinate));
+                var a=smoothEnvelope[knot];var b=smoothEnvelope[knot+1];
+                float minimum=RibbonEnvelope.Interpolate(a.minimum,b.minimum,fraction)*gain;
+                float maximum=RibbonEnvelope.Interpolate(a.maximum,b.maximum,fraction)*gain;
+                float rms=RibbonEnvelope.Interpolate(a.rms,b.rms,fraction)*gain;
+                // Tiny signed motion follows actual envelope asymmetry; silence and paused audio stay still.
+                float motion=.001f*d.waveformMotion*rms/(1+rms)*(maximum+minimum)/(maximum-minimum+.00001f);
+                float low=d.WaveformHeight(minimum)-d.waveformBaseline+motion;
+                float high=d.WaveformHeight(maximum)+d.waveformBaseline+motion;
+                float glow=.0015f*Mathf.Clamp01(d.waveformGlow);
+                float outerLow=Mathf.Max(-heightLimit,low-glow),outerHigh=Mathf.Min(heightLimit,high+glow);
+                int v=i*2;
+                vertices[v]=d.ArcPoint(x,outerLow); vertices[v+1]=d.ArcPoint(x,outerHigh);
+                float height=Mathf.Max(.00001f,outerHigh-outerLow);
+                edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,0);
                 Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 if(d.curvedTimeline && Mathf.Abs(x/d.width*d.arcAngle)>d.interactiveAngle*.5f) c*=.45f;
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
-                colors[v]=colors[v+1]=colors[v+2]=colors[v+3]=c;
+                colors[v]=colors[v+1]=c;
             }
             mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
             mesh.SetColors(colors);
+            mesh.SetUVs(1,edgeData);
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }

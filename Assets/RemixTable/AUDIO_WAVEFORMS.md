@@ -1,5 +1,7 @@
 # Audio-derived curved waveforms
 
+The cache format and source analysis below remain current. Rendering now uses smooth holographic ribbons rather than the historical rectangular DAW columns. See [HOLOGRAPHIC_RIBBONS.md](HOLOGRAPHIC_RIBBONS.md) for the current interpolation, peak-retention controls, gain mapping, shader and geometry budget; the rendering descriptions below record the earlier implementation.
+
 The saved RemixTable scene references four `.rwave` assets through each song's `StemMetadata.waveform`. The original WAVs, streaming AudioSources, DSP clock, automation records and XR configuration are unchanged. Missing caches and silent placeholder songs display a flat baseline. There is no synthetic waveform fallback.
 
 ## Analysis and regeneration

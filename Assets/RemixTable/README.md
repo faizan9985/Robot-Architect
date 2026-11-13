@@ -8,7 +8,7 @@ Timeline zoom: use the expandable **TIMELINE ZOOM** section in the existing palm
 
 ## Gesture controls
 
-Waveforms now show signed peaks from all four real stems using precomputed multiresolution caches. See [AUDIO_WAVEFORMS.md](AUDIO_WAVEFORMS.md) for regeneration, timing resolution, gain display mapping, geometry budgets and validation. This replaces the historical synthetic waveform and additive rendering described below. Silent placeholders remain flat.
+Waveforms now form smooth holographic ribbons driven by all four real stems, with peak-preserving envelope smoothing and rounded continuous geometry. See [HOLOGRAPHIC_RIBBONS.md](HOLOGRAPHIC_RIBBONS.md) for visual controls, gain mapping, budgets and validation, and [AUDIO_WAVEFORMS.md](AUDIO_WAVEFORMS.md) for cache regeneration. Silent placeholders remain flat.
 
 Direct sculpting reads the existing XR Hands subsystem's left and right hands independently. Index/thumb tips determine pinch; wrist tracking is optional and used only for the existing visual twist effect. No rig, input map or hand tracker is added. Initial selection is near-hand; the inherited XRI pipeline is unchanged. Previous/Play-Pause/Next buttons replace the retired spatial song picker.
 
@@ -37,7 +37,8 @@ Gain defaults: neutral 1x, range 0..2.5x, 12 cm ribbon-local Y movement per gain
 - `RibbonView`: reusable dynamic mesh buffers, deterministic scrolling geometry, timestamp sampling and automation previews. Every ribbon reads the shared DSP clock, which freezes during selection and resumes after the final editing owner releases. The fixed vertical playhead marks the center timestamp. Geometry reads stable song-relative automation on each loop.
 - `RemixDesign.asset`: centralized palette, emission, size, spacing, interaction distance, gain limits and waveform quality budgets. Set waveform column count before Play Mode. Orange drums, green bass, cyan other/melody, violet vocals.
 - `WaveformCache` / `WaveformBaker` / `WaveformImporter`: compact signed stereo peak pyramids, streaming editor WAV analysis and reproducible imported caches assigned through stem metadata.
-- `RibbonEnergy.shader` / material: URP opaque unlit vertex colors, stereo-instancing macros, depth writing and sharp envelope edges; no lighting, shadow passes or new postprocessing.
+- `RibbonEnvelope`: song-time envelope smoothing with a configurable peak floor and bounded cubic interpolation; no oscillator or temporal lag.
+- `RibbonEnergy.shader` / material: URP unlit premultiplied translucent body, neon edge strands and a narrow feathered glow fringe in one pass; stereo-instancing macros and no added postprocessing.
 - `SpatialSongPicker`: small spatial title with inherited near/far XRI pinch selection; no extra EventSystem.
 
 The saved scene was duplicated with Unity `EditorSceneManager.SaveScene(..., saveAsCopy: true)` and reopened before removing the `RobotArchitect` gameplay root. The original hands-rig prefab, interaction manager, hand menu, camera, AR session, input and XR UI registration remain serialized as inherited. Original scene, packages, Android/OpenXR configuration, global build scenes and build profile are unchanged. Select the Remix scene explicitly when making a future build; the inherited build list still targets Robot Architect.
@@ -59,7 +60,7 @@ $unity = 'C:\Program Files\Unity\Hub\Editor\6000.3.23f1\Editor\Unity.exe'
 
 ## Performance and limitations
 
-Default four waveforms total 8,192 vertices / 4,096 triangles and four opaque waveform draws, plus the existing playhead. Mesh arrays and indices are allocated once; no geometry arrays are created per frame. Four peak caches occupy approximately 3.63 MiB. Ambient particles and ribbon halos remain disabled in the seated layout. No new bloom, render features, lights or packages are enabled. Automation evaluation scans edits, so very long editing sessions may eventually need indexed curves/baking. Existing URP costs (including inherited SSAO if active) remain unchanged.
+Default four ribbons total 16,392 vertices / 16,384 triangles and four transparent waveform draws, plus the existing playhead. Mesh arrays and indices are allocated once; no geometry arrays are created per frame. Four unchanged peak caches occupy approximately 3.63 MiB. Ambient particles and old halo objects remain disabled in the seated layout; the shader supplies its own narrow fringe. No new bloom, render features, lights or packages are enabled. Automation evaluation scans edits, so very long editing sessions may eventually need indexed curves/baking. Existing URP costs (including inherited SSAO if active) remain unchanged.
 
 NIVIROTest has synchronized four-stem playback with audible whole-stem and region gain and audio-derived signed peak envelopes. Real pitch shifting, effect DSP, FFT, disk persistence and cloud accounts are not implemented. Wrist effects retain color feedback without displacing the accurate envelope. Headset orientation, occlusion and hand jitter need Quest tuning. Region selections may wrap across the song loop. There is no multi-user editing, undo UI, or automatic desk alignment. A shared bounded display scale prevents peaks from overlapping adjacent rows. Passthrough starts in the inherited off state and remains controlled by the existing palm menu. No Quest frame-rate, GPU, thermal or real hand-gesture performance is claimed.
 

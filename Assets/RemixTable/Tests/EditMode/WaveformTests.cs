@@ -133,7 +133,8 @@ namespace RemixTable.Tests
             float outside=manager.design.width*.4f;var cache=manager.library.Current.stems.First(s=>s.id==ribbon.stem).waveform;
             Assert.That(ribbon.EnvelopeAt(outside,.01f).maximum,Is.EqualTo(cache.Query(ribbon.Timestamp(outside),.01).maximum).Within(.00001));
             ribbon.UpdateWaveform();var mesh=ribbon.WaveformMesh;var vertices=mesh.vertices;
-            Assert.AreEqual(2048,mesh.vertexCount);Assert.AreEqual(1024,mesh.triangles.Length/3);
+            Assert.AreEqual((ribbon.CurveSegmentCount+1)*2,mesh.vertexCount);
+            Assert.AreEqual(ribbon.CurveSegmentCount*2,mesh.triangles.Length/3);
             foreach(var p in vertices)
             {
                 Assert.That(new Vector2(p.x,p.z+manager.design.Radius).magnitude,Is.EqualTo(manager.design.Radius).Within(.00001));
@@ -142,7 +143,7 @@ namespace RemixTable.Tests
             Assert.IsTrue(ribbon.CanSelectAt(ribbon.SurfacePoint(0),out _));
             manager.automation.Upsert(new AutomationEdit{songId=manager.library.Current.id,stem=ribbon.stem,parameter=ParameterType.Gain,wholeStem=true,value=0});
             ribbon.UpdateWaveform();Assert.IsTrue(ribbon.CanSelectAt(ribbon.SurfacePoint(0),out _));
-            foreach(var p in mesh.vertices) Assert.That(Mathf.Abs(p.y),Is.EqualTo(manager.design.waveformBaseline).Within(.000001));
+            foreach(var p in mesh.vertices) Assert.That(Mathf.Abs(p.y),Is.EqualTo(manager.design.waveformBaseline+.0015f*Mathf.Clamp01(manager.design.waveformGlow)).Within(.000001));
             // Warm both native mesh setters and managed lookup before measuring actual updates.
             ribbon.UpdateWaveform();long before=GC.GetAllocatedBytesForCurrentThread();
             for(int i=0;i<50;i++)ribbon.UpdateWaveform();
