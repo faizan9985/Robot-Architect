@@ -2,7 +2,9 @@
 
 Audio distribution: the milestone commit excludes the local NIVIROTest MP3 and four WAV stems because redistribution rights have not been verified. Their Unity metadata is retained. Before opening the scene on a fresh checkout, restore authorized copies at `Audio/NIVIROTest.mp3` and `Audio/NIVIROTest/Stems/{drums,bass,other,vocals}.wav` alongside the committed `.meta` files. Without them, the scene cannot play NIVIROTest and tests requiring that scene's music cannot pass. Synthetic audio/gesture tests generate their own clips. See AUDIO_IMPLEMENTATION.md for details.
 
-Open `Scenes/RemixTable.unity` in Unity 6000.3.23f1. Enter Play Mode for procedural meshes. On Quest, enable passthrough with the inherited left-palm menu. The 0.74 x 0.40 m seated panel anchors once, 0.62 m ahead and 0.20 m below the initial eye pose; four rows at 9 cm spacing occupy a 0.348 m interactive span. A separate functional transport canvas sits immediately below. See SEATED_UX.md for configuration, bounds and device acceptance checks. This is a seated prototype, not automatic desk detection. Restart to reposition it.
+Open `Scenes/RemixTable.unity` in Unity 6000.3.23f1. Enter Play Mode for procedural meshes. On Quest, enable passthrough with the inherited left-palm menu. Four curved ribbons surround the initial seated pose over 180 degrees at a radius of 0.8 m, with 9 cm lane spacing and a 0.348 m vertical band centered 0.20 m below the eyes. The central 90 degrees support direct editing; dimmed outer sections provide preview. The timeline shows four seconds of past and four seconds of future music around a stationary forward playhead. A separate transport canvas remains below the playhead. See [CURVED_TIMELINE.md](CURVED_TIMELINE.md) for configuration, mapping, test scope and hardware acceptance checks. Restart to reposition the stable world-space workspace. SEATED_UX.md records the earlier flat layout.
+
+Timeline zoom: use the expandable **TIMELINE ZOOM** section in the existing palm menu, or pinch both hands in empty forward workspace and spread to show fewer seconds. Presets are 4, 8, 16 and 32 seconds; Normal (8s) is the default. See [TIMELINE_ZOOM.md](TIMELINE_ZOOM.md) for gesture arbitration, mapping and deferred changes during edits.
 
 ## Gesture controls
 
@@ -12,15 +14,15 @@ Direct sculpting reads the existing XR Hands subsystem's left and right hands in
 | --- | --- |
 | Pinch within 3.2 cm of a waveform, inside its lane | Select a 0.6-second region and pause all stems and all scrolling |
 | Drag the held pinch up/down | Increase/decrease audible gain and waveform amplitude for that region |
-| Add the other hand's pinch | Enter region-boundary mode; both hands' ribbon-local X positions set the endpoints continuously |
-| Move either hand horizontally while both pinch | Adjust that boundary; no gain/pitch writes, regardless of hand Y separation |
+| Add the other hand's pinch | Enter region-boundary mode; both hands' angular positions set the endpoints continuously |
+| Move either hand along the arc while both pinch | Adjust that boundary; no gain/pitch writes, regardless of hand Y separation |
 | Release either hand | Keep the region and rebase gain drag to the remaining hand's current position, without a jump |
-| Hold a pinch still near an endpoint for 0.65 seconds | Select whole-stem gain editing; drag vertically to change it |
+| Hold a pinch still near an interactive-zone endpoint for 0.65 seconds | Select whole-stem gain editing; drag vertically to change it |
 | Twist a held wrist before gain dragging | Existing visual effect preview; no audible effect DSP |
 | Release the final hand or lose both hands | Retain edits and release this editing pause; resume unless another owner/manual pause remains |
-| Use Previous / Next below the panel | Cycle NIVIROTest and silent placeholders |
+| Use Previous / Next below the playhead | Cycle NIVIROTest and silent placeholders |
 
-Pinch hysteresis is 24 mm to enter, 35 mm to release, tracked separately per hand. States are Idle, OneHandGain and TwoHandRegion. Both hands are read on every runtime update; a second pinch is not rejected for having a different depth or vertical separation. Boundary mode preserves the pause and highlight. It orders local X endpoints before mapping to the fixed song timeline, so intervals can wrap across a loop. If the remaining hand moves vertically after the other hand releases, gain editing continues from the selected region's current gain. Tracking loss of one participating hand transfers to the other; cancellation/disable releases ownership and keeps stored edits.
+Pinch hysteresis is 24 mm to enter, 35 mm to release, tracked separately per hand. States are Idle, OneHandGain and TwoHandRegion. Both hands are read on every runtime update; a second pinch is not rejected for having a different depth or vertical separation. Boundary mode preserves the pause and highlight. It orders angular endpoints before mapping to the fixed song timeline, so intervals can wrap across a loop. If the remaining hand moves vertically after the other hand releases, gain editing continues from the selected region's current gain. Tracking loss of one participating hand transfers to the other; cancellation/disable releases ownership and keeps stored edits.
 
 Gain defaults: neutral 1x, range 0..2.5x, 12 cm ribbon-local Y movement per gain unit, sensitivity 1, 8 mm initiation threshold. Gain dragging back to its starting Y restores the baseline. The selected region factor multiplies whole-stem gain and the final product is capped at 2.5x. Stored pitch edits remain readable, but one-hand Y drag no longer writes pitch. See AUDIO_IMPLEMENTATION.md for smoothing, overlap rules and frame-based precision limits.
 

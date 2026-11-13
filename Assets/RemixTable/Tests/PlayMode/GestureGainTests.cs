@@ -56,6 +56,21 @@ namespace RemixTable.Tests
             audio.Resume();gestures.enabled=true;gestures.ProcessHands(left,default,.016f);
             Assert.AreEqual(1,audio.EditingPauseCount);gestures.enabled=false;
             Assert.AreEqual(0,audio.EditingPauseCount);Assert.IsTrue(manager.clock.playing);Assert.IsFalse(bass.selected);
+            // Author a future edit on the curved right side, then hear the shared clock enter it.
+            gestures.Cancel();audio.Load(song);design.curvedTimeline=true;design.pastSeconds=design.futureSeconds=4;
+            yield return new WaitForSeconds(.3f);
+            manager.zoom.Request(4);manager.zoom.Tick(5,false,design.zoomSmoothingSeconds);
+            manager.automation.edits.Clear();
+            left.position=bass.SurfacePoint(.1f);gestures.ProcessHands(left,default,.016f);
+            Assert.IsTrue(bass.selected);double frozen=manager.clock.elapsed;
+            float target=Mathf.Repeat((float)frozen+manager.zoom.TimeOffset(.1f,design),manager.clock.duration);
+            Assert.That(bass.regionStart,Is.EqualTo(Mathf.Repeat(target-.3f,manager.clock.duration)).Within(.001));
+            left.position-=bass.transform.up*.12f;gestures.ProcessHands(left,default,.016f);
+            Assert.AreEqual(1,manager.automation.edits.Count);
+            Assert.That(manager.automation.EvaluateGain(song.id,StemId.Bass,target,manager.clock.duration,.06f),Is.EqualTo(0).Within(.001));
+            yield return new WaitForSeconds(.1f);Assert.AreEqual(frozen,manager.clock.elapsed);
+            gestures.Cancel();yield return new WaitForSeconds(manager.zoom.TimeOffset(.1f,design)+.2f);
+            Assert.That(audio.sources[1].volume,Is.LessThan(.002f));
             Object.Destroy(root);Object.Destroy(clip);Object.Destroy(design);yield return null;
         }
     }

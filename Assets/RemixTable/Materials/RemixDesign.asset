@@ -48,3 +48,13 @@ MonoBehaviour:
   transportGap: 0.015
   transportHeight: 0.1
   constrainToLanes: 1
+  curvedTimeline: 1
+  arcRadius: 0.8
+  arcAngle: 180
+  interactiveAngle: 90
+  pastSeconds: 4
+  futureSeconds: 4
+  arcScale: 1
+  zoomSmoothingSeconds: 0.16
+  zoomGestureSensitivity: 1
+  zoomMovementThreshold: 0.025

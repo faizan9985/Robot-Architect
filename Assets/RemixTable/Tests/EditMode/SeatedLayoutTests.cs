@@ -15,6 +15,29 @@ namespace RemixTable.Tests
             EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
             manager=Object.FindFirstObjectByType<RemixTableManager>();transport=Object.FindFirstObjectByType<RemixTransport>();
         }
+        [Test] public void ArcCoordinatesWindowLimitsLoopAndAllocationBudget()
+        {
+            var d=manager.design;Assert.IsTrue(d.curvedTimeline);
+            var ribbon=manager.ribbons[0];ribbon.visualTime=10;
+            for(int i=0;i<=100;i++)
+            {
+                float x=(i/100f-.5f)*d.width;var point=d.ArcPoint(x);
+                Assert.That(d.ArcCoordinate(point),Is.EqualTo(x).Within(.00001));
+                Assert.That(new Vector2(point.x,point.z+d.Radius).magnitude,Is.EqualTo(d.Radius).Within(.00001));
+            }
+            Assert.AreEqual(Vector3.zero,d.ArcPoint(0));
+            Assert.Greater(ribbon.Timestamp(d.width*.2f),10);Assert.Less(ribbon.Timestamp(-d.width*.2f),10);
+            Assert.IsFalse(ribbon.CanSelectAt(ribbon.SurfacePoint(d.width*.45f),out _));
+            ribbon.visualTime=manager.clock.duration-.1f;
+            Assert.That(ribbon.Timestamp(d.width*.5f),Is.EqualTo(d.futureSeconds-.1f).Within(.001));
+            // Only arithmetic and value types in the mapping hot path.
+            d.ArcCoordinate(d.ArcPoint(.1f));
+            long before=System.GC.GetAllocatedBytesForCurrentThread();float sum=0;
+            for(int i=0;i<10000;i++)sum+=d.ArcCoordinate(d.ArcPoint(.1f));
+            long allocated=System.GC.GetAllocatedBytesForCurrentThread()-before;
+            Assert.Greater(sum,0);Assert.AreEqual(0,allocated);
+            Assert.LessOrEqual(d.segments*2*4,2048);
+        }
         [Test] public void FourLanesFitWithoutScrollingOrOverlappingHitZones()
         {
             var d=manager.design;Assert.IsTrue(d.constrainToLanes);
@@ -37,12 +60,12 @@ namespace RemixTable.Tests
         {
             foreach(var ribbon in manager.ribbons)
             {
-                ribbon.visualTime=10;float x=manager.design.width*.3f;
-                var point=ribbon.transform.TransformPoint(new Vector3(x,ribbon.HeightAt(x),0));
+                ribbon.visualTime=10;float x=manager.design.width*.2f;
+                var point=ribbon.SurfacePoint(x);
                 Assert.IsTrue(ribbon.CanSelectAt(point,out _));
                 foreach(var other in manager.ribbons)if(other!=ribbon)Assert.IsFalse(other.CanSelectAt(point,out _));
                 Assert.That(ribbon.LocalX(point),Is.EqualTo(x).Within(.0001));
-                Assert.That(ribbon.Timestamp(x),Is.EqualTo(10+.3f*manager.design.visibleSeconds).Within(.0001));
+                Assert.That(ribbon.Timestamp(x),Is.EqualTo(10+manager.design.TimeOffset(x)).Within(.0001));
                 Assert.IsFalse(ribbon.CanSelectAt(ribbon.transform.TransformPoint(new Vector3(0,manager.design.laneHeight,0)),out _));
             }
         }
@@ -90,7 +113,7 @@ namespace RemixTable.Tests
             var canvas=instructions.GetComponentInParent<Canvas>(true);Assert.AreEqual("Hand Menu Canvas",canvas.name);
             canvas.gameObject.SetActive(true);Assert.IsTrue(instructions.gameObject.activeInHierarchy);
             var rect=(RectTransform)instructions.transform;var own=new Rect(rect.anchoredPosition-rect.sizeDelta*.5f,rect.sizeDelta);
-            foreach(var control in canvas.GetComponentsInChildren<Selectable>(true))
+            foreach(var control in canvas.GetComponentsInChildren<Selectable>())
             {
                 var r=(RectTransform)control.transform;
                 Assert.IsFalse(own.Overlaps(new Rect(r.anchoredPosition-r.sizeDelta*.5f,r.sizeDelta)),control.name);
@@ -102,8 +125,13 @@ namespace RemixTable.Tests
         {
             var d=manager.design;var eye=new Vector3(2,1.2f,-3);var pose=d.SeatedPose(eye,new Vector3(0,-.8f,1));
             Assert.That(pose.position.y,Is.EqualTo(eye.y-d.workspaceEyeDrop).Within(.0001));
-            Assert.That(pose.position.z-eye.z,Is.EqualTo(d.workspaceDistance).Within(.0001));
+            Assert.That(pose.position.z-eye.z,Is.EqualTo(d.curvedTimeline?d.Radius:d.workspaceDistance).Within(.0001));
             Assert.That(Vector3.Dot(pose.rotation*Vector3.up,Vector3.up),Is.EqualTo(1).Within(.0001));
+            if(d.curvedTimeline)
+            {
+                Assert.That(pose.position+pose.rotation*new Vector3(0,0,-d.Radius),Is.EqualTo(eye-Vector3.up*d.workspaceEyeDrop));
+                return;
+            }
             // Reach assumption: a shoulder midpoint 20 cm below the eyes, not an anthropometric guarantee.
             var shoulder=eye-Vector3.up*.2f;
             foreach(float x in new[]{-d.width*.5f,d.width*.5f})foreach(float y in new[]{d.LaneY(0),d.LaneY(3),d.TransportY-.04f})

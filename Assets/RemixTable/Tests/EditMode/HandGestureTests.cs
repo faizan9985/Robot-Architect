@@ -2,8 +2,12 @@ using NUnit.Framework;
 using UnityEngine;
 namespace RemixTable.Tests
 {
+    [TestFixture(false)]
+    [TestFixture(true)]
     public class HandGestureTests
     {
+        readonly bool curved;
+        public HandGestureTests(bool curved) { this.curved=curved; }
         GameObject root;
         RemixTableManager manager;
         RibbonView ribbon;
@@ -13,6 +17,8 @@ namespace RemixTable.Tests
             root=new GameObject("gesture fixture");root.SetActive(false);
             manager=root.AddComponent<RemixTableManager>();manager.enabled=false;
             manager.design=ScriptableObject.CreateInstance<RemixDesign>();
+            manager.design.curvedTimeline=curved;
+            manager.design.interactiveAngle=110;
             manager.library=root.AddComponent<SongLibraryManager>();manager.library.songs=new[]{new SongMetadata{id="hands",duration=32}};
             manager.clock.Reset(32);manager.clock.elapsed=10;
             var go=new GameObject("ribbon");go.transform.SetParent(root.transform);
@@ -24,7 +30,7 @@ namespace RemixTable.Tests
         }
         [TearDown] public void Cleanup() { gestures.Cancel();Object.DestroyImmediate(manager.design);Object.DestroyImmediate(root); }
         RibbonInteractionManager.HandSample Hand(float x,float y,float z=0,bool pinch=true) =>
-            new RibbonInteractionManager.HandSample{valid=true,pinch=pinch,position=ribbon.transform.TransformPoint(new Vector3(x,y,z))};
+            new RibbonInteractionManager.HandSample{valid=true,pinch=pinch,position=ribbon.transform.TransformPoint(manager.design.ArcPoint(x,y)+Vector3.forward*z)};
         void Tick(RibbonInteractionManager.HandSample left,RibbonInteractionManager.HandSample right=default,float delta=.016f) => gestures.ProcessHands(left,right,delta);
         [Test] public void PinchHysteresisAndTrackingCoordinatesAreIndependentForEachHand()
         {
@@ -89,7 +95,7 @@ namespace RemixTable.Tests
         }
         [Test] public void EndpointHoldStillEnablesWholeStemGain()
         {
-            float x=manager.design.width*.47f,y=ribbon.HeightAt(x);var a=Hand(x,y);
+            float x=manager.design.width*(curved ? .28f : .47f),y=ribbon.HeightAt(x);var a=Hand(x,y);
             Tick(a,default,.7f);Assert.IsTrue(ribbon.wholeStem);
             Tick(Hand(x,y-.12f));Assert.IsTrue(manager.automation.edits[0].wholeStem);
             Assert.That(manager.automation.EvaluateGain("hands",StemId.Bass,20,32,.06f),Is.EqualTo(0).Within(.0001));
