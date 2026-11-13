@@ -15,6 +15,21 @@ namespace RemixTable
         bool previousRollValid;
         bool endpoint;
         public enum GestureState { Idle, OneHandGain, TwoHandRegion }
+        // Which control a one-hand hold edits. Only that control moves, so lifting never nudges the filter
+        // and twisting never nudges the volume. Picked with the VOLUME / FILTER buttons.
+        public enum ControlMode { Volume, Filter }
+        [SerializeField] ControlMode mode = ControlMode.Volume;
+        public ControlMode Mode
+        {
+            get => mode;
+            set
+            {
+                if (mode == value) return;
+                mode = value;
+                // Switching mid-hold keeps what was already set and continues from the hand's current pose.
+                if (active != null && State == GestureState.OneHandGain) RebaseGain();
+            }
+        }
         public GestureState State { get; private set; }
         public RibbonView ActiveRibbon => active;
         // Live twist readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
@@ -89,14 +104,14 @@ namespace RemixTable
                 if(endpointHold>.65f && !active.wholeStem) {active.wholeStem=true;gainEdit=effectEdit=null;RebaseGain();}
             }
             else endpoint=false;
-            // Lift and twist are independent channels. Each wakes up once it clears its own dead zone and then
-            // keeps tracking for the rest of the hold, so both can be adjusted freely and simultaneously.
+            // Only the selected control is written. It wakes up past its dead zone and then follows the hand
+            // for the rest of the hold, so it can be pushed one way and brought back (or past neutral) freely.
             float displacement=active.transform.InverseTransformPoint(LiftPoint(primary)).y-startY;
             if(primary.rollValid && previousRollValid) accumulatedRoll+=Mathf.DeltaAngle(previousRoll,primary.roll);
             previousRoll=primary.roll;previousRollValid=primary.rollValid;
-            if(gainEdit!=null || Mathf.Abs(displacement)>manager.design.gainDragDeadzone)
+            if(mode==ControlMode.Volume && (gainEdit!=null || Mathf.Abs(displacement)>manager.design.gainDragDeadzone))
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
-            if(effectEdit!=null || (primary.rollValid && Mathf.Abs(accumulatedRoll)>manager.design.twistDeadzoneDegrees))
+            if(mode==ControlMode.Filter && (effectEdit!=null || (primary.rollValid && Mathf.Abs(accumulatedRoll)>manager.design.twistDeadzoneDegrees)))
                 Write(ref effectEdit,ParameterType.Effect,manager.design.MapTwistEffect(initialEffect,accumulatedRoll));
         }
         HandSample Read(XRHand hand,bool wasPinching)

@@ -75,6 +75,7 @@ namespace RemixTable.Tests
             var ribbon=go.AddComponent<RibbonView>();ribbon.manager=manager;ribbon.stem=StemId.Melody;ribbon.visualTime=10;
             manager.ribbons=new[]{ribbon};
             var gestures=root.AddComponent<RibbonInteractionManager>();gestures.manager=manager;gestures.enabled=false;
+            gestures.Mode=RibbonInteractionManager.ControlMode.Filter;
             root.SetActive(true);
             var hand=new RibbonInteractionManager.HandSample{valid=true,pinch=true,rollValid=true,roll=0,
                 position=ribbon.transform.TransformPoint(new Vector3(0,ribbon.HeightAt(0),0))};

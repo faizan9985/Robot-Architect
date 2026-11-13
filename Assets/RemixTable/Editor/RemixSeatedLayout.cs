@@ -31,19 +31,19 @@ namespace RemixTable.Editor
             t.localPosition=pos;t.localScale=size;t.GetComponent<MeshRenderer>().sharedMaterial=mat;
             t.GetComponent<MeshRenderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;t.GetComponent<MeshRenderer>().receiveShadows=false;
         }
-        static RectTransform Rect(Transform parent,string name,Vector2 pos,Vector2 size)
+        internal static RectTransform Rect(Transform parent,string name,Vector2 pos,Vector2 size)
         {
             var t=parent.Find(name) as RectTransform;
             if(t==null){var go=new GameObject(name,typeof(RectTransform));go.transform.SetParent(parent,false);t=(RectTransform)go.transform;}
             t.gameObject.layer=5;t.anchorMin=t.anchorMax=t.pivot=new Vector2(.5f,.5f);t.sizeDelta=size;t.anchoredPosition=pos;return t;
         }
-        static TMP_Text Text(Transform parent,string name,string text,Vector2 pos,Vector2 size,float fontSize,TMP_FontAsset font)
+        internal static TMP_Text Text(Transform parent,string name,string text,Vector2 pos,Vector2 size,float fontSize,TMP_FontAsset font)
         {
             var rect=Rect(parent,name,pos,size);var label=rect.GetComponent<TextMeshProUGUI>();if(label==null)label=rect.gameObject.AddComponent<TextMeshProUGUI>();
             label.text=text;label.font=font;label.fontSize=fontSize;label.color=new Color(.8f,.88f,.94f);label.alignment=TextAlignmentOptions.Center;label.raycastTarget=false;
             label.overflowMode=TextOverflowModes.Ellipsis;return label;
         }
-        static Button Button(Transform parent,string name,string text,float x,float width,TMP_FontAsset font,UnityEngine.Events.UnityAction action)
+        internal static Button Button(Transform parent,string name,string text,float x,float width,TMP_FontAsset font,UnityEngine.Events.UnityAction action)
         {
             var rect=Rect(parent,name,new Vector2(x,-15),new Vector2(width,50));
             var image=rect.GetComponent<Image>();if(image==null)image=rect.gameObject.AddComponent<Image>();image.color=new Color(.07f,.11f,.15f,1);image.raycastTarget=true;
@@ -111,6 +111,7 @@ namespace RemixTable.Editor
             for(int i=0;i<names.Length;i++){var rect=menuCanvas.GetComponentsInChildren<RectTransform>(true).Single(x=>x.name==names[i]);rect.anchoredPosition=new Vector2(0,ys[i]);}
             transport.palmInstructions=Text(panel,"RemixGestureInstructions",RemixTransport.Guidance,new Vector2(0,-82),new Vector2(316,142),13,font);
             transport.palmInstructions.alignment=TextAlignmentOptions.Left;
+            RemixModeLayout.Build(manager,transport);
             for(int i=0;i<4;i++)RemixSceneBuilder.Require(manager.audioManager.sources[i]==sourceRefs[i] && sourceRefs[i].clip==clips[i],"preserved stem source and clip references");
             EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();Validate();
         }

@@ -9,7 +9,7 @@ namespace RemixTable
         public Button previousSong, playPause, nextSong;
         public TMP_Text songTitle, playbackTime, playPauseLabel;
         public TMP_Text palmInstructions;
-        public const string Guidance="PINCH + LIFT / GAIN\nTWO HANDS / REGION\nTWIST / FILTER SWEEP\nHOLD ENDPOINT / WHOLE STEM";
+        public const string Guidance="PICK VOLUME OR FILTER BELOW\nVOLUME: PINCH + LIFT\nFILTER: PINCH + TWIST\nTWO HANDS / REGION\nHOLD ENDPOINT / WHOLE STEM";
         int displayedSecond=-1;
         int? displayedVolume, displayedFilter;
         // Live readout of what the current hold is doing, e.g. "VOL 120%  HIGH 40%". Empty when idle.
