@@ -11,12 +11,11 @@ namespace RemixTable
         RibbonView active;
         int owner;
         float startY, initialGain, initialEffect, endpointHold;
-        float previousRoll, accumulatedRoll;
-        bool previousRollValid;
         bool endpoint;
         public enum GestureState { Idle, OneHandGain, TwoHandRegion }
-        // Which control a one-hand hold edits. Only that control moves, so lifting never nudges the filter
-        // and twisting never nudges the volume. Picked with the VOLUME / FILTER buttons.
+        // Which control a one-hand hold edits; both use the same lift up/down motion, and only the selected
+        // one moves. Picked with the VOLUME / FILTER buttons.
+        // Volume: up = louder, down = quieter. Filter: up = thinner (high-pass), down = muffled (low-pass).
         public enum ControlMode { Volume, Filter }
         [SerializeField] ControlMode mode = ControlMode.Volume;
         public ControlMode Mode
@@ -32,18 +31,18 @@ namespace RemixTable
         }
         public GestureState State { get; private set; }
         public RibbonView ActiveRibbon => active;
-        // Live twist readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
-        public bool IsTwisting => active!=null && effectEdit!=null;
-        public float TwistEffect => effectEdit!=null ? effectEdit.value : 0;
+        // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
+        public bool IsFiltering => active!=null && effectEdit!=null;
+        public float FilterEffect => effectEdit!=null ? effectEdit.value : 0;
         // Live lift readout: the gain being written by this hold.
         public bool IsLifting => active!=null && gainEdit!=null;
         public float LiftGain => gainEdit!=null ? gainEdit.value : 1;
         Vector3 firstPosition;
         AutomationEdit gainEdit, effectEdit;
         readonly HandSample[] hands = new HandSample[2];
-        // position = pinch point (selection, regions). wrist = lift reference: it sits on the forearm's
-        // roll axis, so twisting does not move it, which lets lift and twist run together in one hold.
-        public struct HandSample { public bool valid, pinch; public Vector3 position; public float roll; public bool rollValid; public Vector3 wrist; public bool wristValid; }
+        // position = pinch point (selection, regions). wrist = lift reference: it is steadier than the
+        // fingertips, which wobble as the hand rotates slightly while lifting.
+        public struct HandSample { public bool valid, pinch; public Vector3 position; public Vector3 wrist; public bool wristValid; }
         static Vector3 LiftPoint(HandSample hand) => hand.wristValid ? hand.wrist : hand.position;
         void Update()
         {
@@ -107,12 +106,11 @@ namespace RemixTable
             // Only the selected control is written. It wakes up past its dead zone and then follows the hand
             // for the rest of the hold, so it can be pushed one way and brought back (or past neutral) freely.
             float displacement=active.transform.InverseTransformPoint(LiftPoint(primary)).y-startY;
-            if(primary.rollValid && previousRollValid) accumulatedRoll+=Mathf.DeltaAngle(previousRoll,primary.roll);
-            previousRoll=primary.roll;previousRollValid=primary.rollValid;
-            if(mode==ControlMode.Volume && (gainEdit!=null || Mathf.Abs(displacement)>manager.design.gainDragDeadzone))
+            bool moved=Mathf.Abs(displacement)>manager.design.gainDragDeadzone;
+            if(mode==ControlMode.Volume && (gainEdit!=null || moved))
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
-            if(mode==ControlMode.Filter && (effectEdit!=null || (primary.rollValid && Mathf.Abs(accumulatedRoll)>manager.design.twistDeadzoneDegrees)))
-                Write(ref effectEdit,ParameterType.Effect,manager.design.MapTwistEffect(initialEffect,accumulatedRoll));
+            if(mode==ControlMode.Filter && (effectEdit!=null || moved))
+                Write(ref effectEdit,ParameterType.Effect,manager.design.MapDragFilter(initialEffect,displacement));
         }
         HandSample Read(XRHand hand,bool wasPinching)
         {
@@ -122,8 +120,6 @@ namespace RemixTable
             var sample=SamplePinch(index.position,thumb.position,tracking,wasPinching);
             if(hand.GetJoint(XRHandJointID.Wrist).TryGetPose(out var wrist))
             {
-                sample.roll=(tracking!=null?tracking.rotation*wrist.rotation:wrist.rotation).eulerAngles.z;
-                sample.rollValid=true;
                 sample.wrist=tracking!=null?tracking.TransformPoint(wrist.position):wrist.position;
                 sample.wristValid=true;
             }
@@ -139,7 +135,7 @@ namespace RemixTable
             State=GestureState.OneHandGain;
             startY=active.transform.InverseTransformPoint(LiftPoint(hands[owner])).y;
             initialGain=gainEdit!=null ? AutomationStore.SafeGain(gainEdit.value) : Value(ParameterType.Gain);
-            previousRoll=hands[owner].roll;previousRollValid=hands[owner].rollValid;accumulatedRoll=0;initialEffect=Value(ParameterType.Effect);effectEdit=null;
+            initialEffect=Value(ParameterType.Effect);effectEdit=null;
         }
         void Begin(RibbonView ribbon,int h)
         {

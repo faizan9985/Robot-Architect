@@ -21,21 +21,21 @@ namespace RemixTable.Tests
             Assert.Less(StemFilter.LowpassCutoff(-.6f),StemFilter.LowpassCutoff(-.3f));
             Assert.Greater(StemFilter.HighpassCutoff(.6f),StemFilter.HighpassCutoff(.3f));
         }
-        // Regression: clockwise (high-pass) felt dead because it stayed under ~170 Hz at a 45° twist.
-        // From a 30° twist (1/3 of the default 90° sweep), each direction must reach the band where
+        // Regression: the high-pass direction felt dead because it stayed under ~170 Hz at half travel.
+        // From 1/3 of the sweep (4 cm of lift), each direction must reach the band where
         // vocals/drums/melody audibly change: high-pass above ~300 Hz, low-pass below ~5 kHz.
         [TestCase(.334f)] [TestCase(.5f)] [TestCase(.67f)] [TestCase(1f)]
-        public void BothDirectionsBecomeAudibleAtTheSameTwist(float amount)
+        public void BothDirectionsBecomeAudibleAtTheSameTravel(float amount)
         {
             Assert.GreaterOrEqual(StemFilter.HighpassCutoff(amount),300f,$"high-pass too weak at {amount}");
             Assert.LessOrEqual(StemFilter.LowpassCutoff(-amount),5000f,$"low-pass too weak at {amount}");
         }
-        [Test] public void HalfTwistHighpassThinsMoreThanJustSubBass()
+        [Test] public void HalfTravelHighpassThinsMoreThanJustSubBass()
         {
             Assert.GreaterOrEqual(StemFilter.HighpassCutoff(.5f),500f);
             Assert.LessOrEqual(StemFilter.LowpassCutoff(-.5f),3000f);
         }
-        [Test] public void TransportShowsTwistDirectionAndStrength()
+        [Test] public void TransportShowsFilterDirectionAndStrength()
         {
             Assert.AreEqual("LOW 50%",RemixTransport.GestureLabel(null,-50));
             Assert.AreEqual("HIGH 40%",RemixTransport.GestureLabel(null,40));
@@ -54,43 +54,17 @@ namespace RemixTable.Tests
             store.Upsert(new AutomationEdit{songId="s",stem=StemId.Vocals,parameter=ParameterType.Effect,wholeStem=true,value=3});
             Assert.AreEqual(1,store.Evaluate("s",StemId.Vocals,ParameterType.Effect,5,32));
         }
-        [Test] public void TwistMappingRespectsRangeAndInversion()
+        [Test] public void LiftMappingIsUpThinDownMuffledAndClamped()
         {
             var design=ScriptableObject.CreateInstance<RemixDesign>();
-            design.filterTwistDegrees=90;
-            Assert.AreEqual(.5f,design.MapTwistEffect(0,45),.0001f);
-            Assert.AreEqual(-1,design.MapTwistEffect(0,-200),.0001f);
-            design.invertFilterTwist=true;
-            Assert.AreEqual(-.5f,design.MapTwistEffect(0,45),.0001f);
+            design.filterDragDistance=.12f;
+            Assert.AreEqual(.5f,design.MapDragFilter(0,.06f),.0001f,"up = high-pass");
+            Assert.AreEqual(-.5f,design.MapDragFilter(0,-.06f),.0001f,"down = low-pass");
+            Assert.AreEqual(0,design.MapDragFilter(0,0),.0001f,"start height = neutral");
+            Assert.AreEqual(1,design.MapDragFilter(0,.5f),.0001f);
+            Assert.AreEqual(-1,design.MapDragFilter(0,-.5f),.0001f);
+            Assert.AreEqual(.25f,design.MapDragFilter(-.25f,.06f),.0001f,"continues from an existing filter value");
             Object.DestroyImmediate(design);
-        }
-        [TestCase(false)] [TestCase(true)] public void TwistGestureWritesBipolarEffectWithoutGain(bool invert)
-        {
-            var root=new GameObject("twist fixture");root.SetActive(false);
-            var manager=root.AddComponent<RemixTableManager>();manager.enabled=false;
-            manager.design=ScriptableObject.CreateInstance<RemixDesign>();manager.design.invertFilterTwist=invert;
-            manager.library=root.AddComponent<SongLibraryManager>();manager.library.songs=new[]{new SongMetadata{id="twist",duration=32}};
-            manager.clock.Reset(32);manager.clock.elapsed=10;
-            var go=new GameObject("ribbon");go.transform.SetParent(root.transform);
-            var ribbon=go.AddComponent<RibbonView>();ribbon.manager=manager;ribbon.stem=StemId.Melody;ribbon.visualTime=10;
-            manager.ribbons=new[]{ribbon};
-            var gestures=root.AddComponent<RibbonInteractionManager>();gestures.manager=manager;gestures.enabled=false;
-            gestures.Mode=RibbonInteractionManager.ControlMode.Filter;
-            root.SetActive(true);
-            var hand=new RibbonInteractionManager.HandSample{valid=true,pinch=true,rollValid=true,roll=0,
-                position=ribbon.transform.TransformPoint(new Vector3(0,ribbon.HeightAt(0),0))};
-            gestures.ProcessHands(hand,default,.016f);
-            float sign=invert?-1:1;
-            hand.roll=-45;gestures.ProcessHands(hand,default,.016f);
-            var edit=manager.automation.edits.Find(e=>e.parameter==ParameterType.Effect);
-            Assert.IsNotNull(edit);Assert.AreEqual(-.5f*sign,edit.value,.0001f);
-            hand.roll=0;gestures.ProcessHands(hand,default,.016f);
-            hand.roll=45;gestures.ProcessHands(hand,default,.016f);
-            hand.roll=90;gestures.ProcessHands(hand,default,.016f);
-            hand.roll=135;gestures.ProcessHands(hand,default,.016f);
-            Assert.AreEqual(1*sign,edit.value,.0001f); // Clamped at full sweep.
-            Assert.IsFalse(manager.automation.edits.Exists(e=>e.parameter==ParameterType.Gain));
-            gestures.Cancel();Object.DestroyImmediate(manager.design);Object.DestroyImmediate(root);
         }
     }
 }

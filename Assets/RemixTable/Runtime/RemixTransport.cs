@@ -9,7 +9,7 @@ namespace RemixTable
         public Button previousSong, playPause, nextSong;
         public TMP_Text songTitle, playbackTime, playPauseLabel;
         public TMP_Text palmInstructions;
-        public const string Guidance="PICK VOLUME OR FILTER BELOW\nVOLUME: PINCH + LIFT\nFILTER: PINCH + TWIST\nTWO HANDS / REGION\nHOLD ENDPOINT / WHOLE STEM";
+        public const string Guidance="PICK VOLUME OR FILTER BELOW\nPINCH + MOVE UP / DOWN\nFILTER: UP THIN, DOWN MUFFLED\nTWO HANDS / REGION\nHOLD ENDPOINT / WHOLE STEM";
         int displayedSecond=-1;
         int? displayedVolume, displayedFilter;
         // Live readout of what the current hold is doing, e.g. "VOL 120%  HIGH 40%". Empty when idle.
@@ -45,7 +45,7 @@ namespace RemixTable
             int second=Mathf.FloorToInt(manager.clock.Time);
             var gestures=manager.interactions;
             int? volume=gestures!=null && gestures.IsLifting ? Mathf.RoundToInt(gestures.LiftGain*100) : (int?)null;
-            int? filter=gestures!=null && gestures.IsTwisting ? Mathf.RoundToInt(gestures.TwistEffect*100) : (int?)null;
+            int? filter=gestures!=null && gestures.IsFiltering ? Mathf.RoundToInt(gestures.FilterEffect*100) : (int?)null;
             if(!dirty && second==displayedSecond && manual==displayedManual && editing==displayedEditing && audio.Ready==displayedReady && volume==displayedVolume && filter==displayedFilter) return;
             displayedVolume=volume;displayedFilter=filter;
             string gesture=GestureLabel(volume,filter);

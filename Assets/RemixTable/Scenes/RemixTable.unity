@@ -10268,10 +10268,10 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'PICK VOLUME OR FILTER BELOW
 
-    VOLUME: PINCH + LIFT
+    PINCH + MOVE UP / DOWN
 
-    FILTER: PINCH
-    + TWIST
+    FILTER: UP
+    THIN, DOWN MUFFLED
 
     TWO HANDS / REGION
 
