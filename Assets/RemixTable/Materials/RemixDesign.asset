@@ -37,6 +37,13 @@ MonoBehaviour:
   gainDragDistance: 0.12
   gainDragDeadzone: 0.008
   segments: 128
+  waveformColumns: 512
+  waveformBaseline: 0.0006
+  waveformAmplitudeScale: 1
+  waveformSmoothing: 0.7
+  waveformPeakPreservation: 0.85
+  waveformGlow: 0.35
+  waveformMotion: 0.25
   particleBudget: 24
   ribbonMaterial: {fileID: 2100000, guid: 5475df898e2a8954b8e3384e0b9dc8b2, type: 2}
   panelWidth: 0.74
@@ -48,3 +55,13 @@ MonoBehaviour:
   transportGap: 0.015
   transportHeight: 0.1
   constrainToLanes: 1
+  curvedTimeline: 1
+  arcRadius: 0.8
+  arcAngle: 180
+  interactiveAngle: 180
+  pastSeconds: 4
+  futureSeconds: 4
+  arcScale: 1
+  zoomSmoothingSeconds: 0.16
+  zoomGestureSensitivity: 1
+  zoomMovementThreshold: 0.025

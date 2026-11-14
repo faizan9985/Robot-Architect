@@ -2,8 +2,12 @@ using NUnit.Framework;
 using UnityEngine;
 namespace RemixTable.Tests
 {
+    [TestFixture(false)]
+    [TestFixture(true)]
     public class HandGestureTests
     {
+        readonly bool curved;
+        public HandGestureTests(bool curved) { this.curved=curved; }
         GameObject root;
         RemixTableManager manager;
         RibbonView ribbon;
@@ -13,6 +17,8 @@ namespace RemixTable.Tests
             root=new GameObject("gesture fixture");root.SetActive(false);
             manager=root.AddComponent<RemixTableManager>();manager.enabled=false;
             manager.design=ScriptableObject.CreateInstance<RemixDesign>();
+            manager.design.curvedTimeline=curved;
+            manager.design.interactiveAngle=180;
             manager.library=root.AddComponent<SongLibraryManager>();manager.library.songs=new[]{new SongMetadata{id="hands",duration=32}};
             manager.clock.Reset(32);manager.clock.elapsed=10;
             var go=new GameObject("ribbon");go.transform.SetParent(root.transform);
@@ -24,7 +30,7 @@ namespace RemixTable.Tests
         }
         [TearDown] public void Cleanup() { gestures.Cancel();Object.DestroyImmediate(manager.design);Object.DestroyImmediate(root); }
         RibbonInteractionManager.HandSample Hand(float x,float y,float z=0,bool pinch=true) =>
-            new RibbonInteractionManager.HandSample{valid=true,pinch=pinch,position=ribbon.transform.TransformPoint(new Vector3(x,y,z))};
+            new RibbonInteractionManager.HandSample{valid=true,pinch=pinch,position=ribbon.transform.TransformPoint(manager.design.ArcPoint(x,y)+Vector3.forward*z)};
         void Tick(RibbonInteractionManager.HandSample left,RibbonInteractionManager.HandSample right=default,float delta=.016f) => gestures.ProcessHands(left,right,delta);
         [Test] public void PinchHysteresisAndTrackingCoordinatesAreIndependentForEachHand()
         {
@@ -93,6 +99,23 @@ namespace RemixTable.Tests
             Tick(a,default,.7f);Assert.IsTrue(ribbon.wholeStem);
             Tick(Hand(x,y-.12f));Assert.IsTrue(manager.automation.edits[0].wholeStem);
             Assert.That(manager.automation.EvaluateGain("hands",StemId.Bass,20,32,.06f),Is.EqualTo(0).Within(.0001));
+        }
+        [TestCase(-1f)] [TestCase(1f)] public void SideGainAndRegionUseAngularTimestamps(float side)
+        {
+            var d=manager.design;
+            float x=side*d.width*.45f;
+            var a=Hand(x,0);Tick(a);
+            Assert.IsTrue(ribbon.selected);
+            Assert.That(ribbon.regionStart,Is.EqualTo(Mathf.Repeat(ribbon.Timestamp(x)-.3f,32)).Within(.0001));
+            Tick(Hand(x,-.06f));
+            Assert.That(manager.automation.edits[0].value,Is.EqualTo(.5f).Within(.0001));
+            Assert.IsFalse(manager.automation.edits[0].wholeStem);
+            float other=side*d.width*.5f;
+            Tick(Hand(x,-.06f),Hand(other,0));
+            Assert.AreEqual(RibbonInteractionManager.GestureState.TwoHandRegion,gestures.State);
+            Assert.That(ribbon.regionStart,Is.EqualTo(ribbon.Timestamp(Mathf.Min(x,other))).Within(.0001));
+            Assert.That(ribbon.regionEnd,Is.EqualTo(ribbon.Timestamp(Mathf.Max(x,other))).Within(.0001));
+            Assert.That(manager.automation.edits[0].value,Is.EqualTo(.5f).Within(.0001));
         }
     }
 }

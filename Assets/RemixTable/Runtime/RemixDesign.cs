@@ -31,6 +31,21 @@ namespace RemixTable
             return Mathf.Clamp(AutomationStore.SafeGain(initial+(ratio-1)*gainGestureSensitivity),low,high);
         }
         [Range(32,256)] public int segments = 128;
+        [Header("Audio waveform")]
+        [Range(128,512)] public int waveformColumns = 512;
+        [Tooltip("Minimum ribbon half-thickness in meters, excluding the glow fringe.")]
+        [Min(.0001f)] public float waveformBaseline = .0006f;
+        [Min(0)] public float waveformAmplitudeScale = 1;
+        [Range(0,1)] public float waveformSmoothing = .7f;
+        [Range(0,1)] public float waveformPeakPreservation = .85f;
+        [Range(0,2)] public float waveformGlow = .35f;
+        [Range(0,1)] public float waveformMotion = .25f;
+        // One monotonic signed soft bound for all stems/regions, including float WAV peaks >1.
+        public float WaveformHeight(float amplitude)
+        {
+            amplitude*=Mathf.Max(0,waveformAmplitudeScale);
+            return amplitude / (1+Mathf.Abs(amplitude)) * Mathf.Max(0,laneHeight*.5f-.006f-waveformBaseline);
+        }
         public int particleBudget = 24;
         public Material ribbonMaterial;
         [Header("Seated workspace (meters)")]
@@ -39,6 +54,34 @@ namespace RemixTable
         public float workspaceDistance = .62f, workspaceEyeDrop = .20f;
         public float transportGap = .015f, transportHeight = .10f;
         public bool constrainToLanes;
+        [Header("Curved timeline")]
+        public bool curvedTimeline;
+        [Range(.5f,1.2f)] public float arcRadius = .8f;
+        [Range(90,200)] public float arcAngle = 180;
+        [Range(40,200)] public float interactiveAngle = 180;
+        [Min(.1f)] public float pastSeconds = 4, futureSeconds = 4;
+        [Range(.5f,1.5f)] public float arcScale = 1;
+        [Header("Timeline zoom")]
+        [Min(.01f)] public float zoomSmoothingSeconds = .16f;
+        [Range(.25f,3)] public float zoomGestureSensitivity = 1;
+        [Min(.005f)] public float zoomMovementThreshold = .025f;
+        public float Radius => Mathf.Max(.1f,arcRadius*arcScale);
+        public float HalfAngle => Mathf.Clamp(arcAngle,1,200)*Mathf.Deg2Rad*.5f;
+        // Ribbon coordinates retain a normalized width parameter; world positions use angle, never flat X.
+        public Vector3 ArcPoint(float coordinate, float height = 0)
+        {
+            if(!curvedTimeline) return new Vector3(coordinate,height,0);
+            float angle=coordinate/width*2*HalfAngle;
+            return new Vector3(Mathf.Sin(angle)*Radius,height,(Mathf.Cos(angle)-1)*Radius);
+        }
+        public float ArcCoordinate(Vector3 local)
+        {
+            if(!curvedTimeline) return Mathf.Clamp(local.x,-width*.5f,width*.5f);
+            float angle=Mathf.Atan2(local.x,local.z+Radius);
+            return Mathf.Clamp(angle,-HalfAngle,HalfAngle)/(2*HalfAngle)*width;
+        }
+        public float TimeOffset(float coordinate) => !curvedTimeline ? coordinate/width*visibleSeconds :
+            coordinate/width*2*(coordinate<0?pastSeconds:futureSeconds);
         public float TransportY => -panelHeight*.5f-transportGap-transportHeight*.5f;
         public float LaneY(int row) => (1.5f-row)*spacing;
         public float WaveCenterLimit => Mathf.Max(.001f,laneHeight*.5f-thickness*1.8f-.003f);
@@ -46,7 +89,7 @@ namespace RemixTable
         {
             var forward=Vector3.ProjectOnPlane(gaze,Vector3.up).normalized;
             if(forward.sqrMagnitude<.5f) forward=Vector3.forward;
-            return new Pose(eye+forward*workspaceDistance-Vector3.up*workspaceEyeDrop,Quaternion.LookRotation(forward));
+            return new Pose(eye+forward*(curvedTimeline?Radius:workspaceDistance)-Vector3.up*workspaceEyeDrop,Quaternion.LookRotation(forward));
         }
     }
 }

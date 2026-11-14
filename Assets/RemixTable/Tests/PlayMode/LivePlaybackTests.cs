@@ -6,6 +6,70 @@ namespace RemixTable.Tests
 {
     public class LivePlaybackTests
     {
+        [UnityTest] public IEnumerator MergedSceneSupportsLiveSideModesPausedRegionsZoomAndTransport()
+        {
+            #if UNITY_EDITOR
+            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode("Assets/RemixTable/Scenes/RemixTable.unity",new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
+            #endif
+            yield return new WaitForSeconds(2);
+            var manager=Object.FindFirstObjectByType<RemixTableManager>();
+            var audio=manager.audioManager;var gestures=manager.interactions;gestures.enabled=false;
+            var mode=Object.FindFirstObjectByType<RemixModeSelector>();
+            var playback=Object.FindFirstObjectByType<RemixPlaybackModeSelector>();
+            var transport=Object.FindFirstObjectByType<RemixTransport>();
+            var ribbon=manager.ribbons[0];
+            RibbonInteractionManager.HandSample Hand(float x,float lift=0) => new RibbonInteractionManager.HandSample{valid=true,pinch=true,position=ribbon.SurfacePoint(x)+ribbon.transform.up*lift};
+            playback.liveButton.onClick.Invoke();Assert.IsTrue(audio.LiveMode);
+            foreach(var filter in new[]{false,true}) foreach(float side in new[]{-1f,1f})
+            {
+                if(filter) mode.filterButton.onClick.Invoke();else mode.volumeButton.onClick.Invoke();
+                float x=side*manager.design.width*.45f;
+                gestures.ProcessHands(Hand(x),default,.016f);
+                Assert.AreSame(ribbon,gestures.ActiveRibbon);
+                double before=manager.clock.elapsed;
+                gestures.ProcessHands(Hand(x,.03f),default,.016f);
+                Assert.IsTrue(manager.IsEditing);Assert.IsTrue(manager.clock.playing);
+                var parameter=filter?ParameterType.Effect:ParameterType.Gain;
+                Assert.IsTrue(manager.automation.edits.Exists(e=>e.stem==ribbon.stem && e.parameter==parameter));
+                float window=manager.zoom.VisibleSeconds;
+                yield return new WaitForSeconds(.1f);
+                Assert.Greater(manager.clock.elapsed,before);Assert.AreEqual(window,manager.zoom.VisibleSeconds);
+                foreach(var source in audio.sources) Assert.IsTrue(source.isPlaying);
+                gestures.Cancel();
+            }
+            mode.filterButton.onClick.Invoke();
+            gestures.ProcessHands(Hand(0),default,.016f);
+            gestures.ProcessHands(Hand(0,-.06f),default,.016f);
+            yield return new WaitForSeconds(.15f);
+            Assert.Less(audio.Effect(ribbon.stem),-.4f,"live hand gesture reaches the playing stem filter");
+            Assert.Less(audio.Lowpass(ribbon.stem).cutoffFrequency,5000);
+            gestures.Cancel();
+            playback.editButton.onClick.Invoke();Assert.IsFalse(audio.LiveMode);
+            mode.filterButton.onClick.Invoke();
+            gestures.ProcessHands(Hand(-manager.design.width*.45f),Hand(manager.design.width*.45f),.016f);
+            Assert.AreEqual(RibbonInteractionManager.GestureState.TwoHandRegion,gestures.State);
+            Assert.IsFalse(manager.clock.playing);
+            double paused=manager.clock.elapsed;
+            yield return new WaitForSeconds(.1f);Assert.AreEqual(paused,manager.clock.elapsed);
+            gestures.Cancel();playback.liveButton.onClick.Invoke();
+            var left=new RibbonInteractionManager.HandSample{valid=true,pinch=true,position=manager.workspace.TransformPoint(new Vector3(-.15f,.3f,-.25f))};
+            var right=new RibbonInteractionManager.HandSample{valid=true,pinch=true,position=manager.workspace.TransformPoint(new Vector3(.15f,.3f,-.25f))};
+            double beforeZoom=manager.clock.elapsed;
+            gestures.ProcessHands(left,right,.016f);
+            left.position=manager.workspace.TransformPoint(new Vector3(-.3f,.3f,-.25f));right.position=manager.workspace.TransformPoint(new Vector3(.3f,.3f,-.25f));
+            gestures.ProcessHands(left,right,.016f);
+            Assert.AreEqual(RibbonInteractionManager.GestureState.Zooming,gestures.State);
+            Assert.AreEqual(4,manager.zoom.TargetSeconds);Assert.IsFalse(manager.IsEditing);
+            yield return new WaitForSeconds(.3f);Assert.Greater(manager.clock.elapsed,beforeZoom);
+            gestures.Cancel();
+            transport.playPause.onClick.Invoke();Assert.IsTrue(audio.IsManuallyPaused);
+            transport.playPause.onClick.Invoke();Assert.IsFalse(audio.IsManuallyPaused);
+            var song=manager.library.Current;
+            transport.nextSong.onClick.Invoke();Assert.AreNotSame(song,manager.library.Current);
+            transport.previousSong.onClick.Invoke();Assert.AreSame(song,manager.library.Current);
+            Assert.AreEqual(1,Object.FindObjectsByType<AudioListener>(FindObjectsSortMode.None).Length);
+            foreach(var source in audio.sources) Assert.NotNull(source.clip);
+        }
         [UnityTest] public IEnumerator LiveModeKeepsPlayingWhileEditingAndEditModePauses()
         {
             var root=new GameObject("live playback");root.SetActive(false);

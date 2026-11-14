@@ -6,8 +6,11 @@ namespace RemixTable.Tests
 {
     // LIVE playback keeps the song running while a ribbon is held, so a one-hand hold's region follows the
     // playhead for as long as the hold lasts. EDIT (default) keeps the region fixed and the song paused.
+    [TestFixture(false)] [TestFixture(true)]
     public class LiveModeGestureTests
     {
+        readonly bool curved;
+        public LiveModeGestureTests(bool curved) { this.curved=curved; }
         GameObject root;
         RemixTableManager manager;
         RemixAudioManager audio;
@@ -18,6 +21,7 @@ namespace RemixTable.Tests
             root=new GameObject("live fixture");root.SetActive(false);
             manager=root.AddComponent<RemixTableManager>();manager.enabled=false;
             manager.design=ScriptableObject.CreateInstance<RemixDesign>();
+            manager.design.curvedTimeline=curved;manager.workspace=root.transform;
             manager.library=root.AddComponent<SongLibraryManager>();manager.library.songs=new[]{new SongMetadata{id="live",duration=32}};
             audio=root.AddComponent<RemixAudioManager>();audio.manager=manager;audio.enabled=false;manager.audioManager=audio;
             manager.clock.Reset(32);manager.clock.elapsed=10;
@@ -30,8 +34,8 @@ namespace RemixTable.Tests
         }
         [TearDown] public void Cleanup() { gestures.Cancel();Object.DestroyImmediate(manager.design);Object.DestroyImmediate(root); }
         RibbonInteractionManager.HandSample Hand(float x,float lift) => new RibbonInteractionManager.HandSample{valid=true,pinch=true,
-            position=ribbon.transform.TransformPoint(new Vector3(x,ribbon.HeightAt(x)+lift,0)),
-            wrist=ribbon.transform.TransformPoint(new Vector3(x,ribbon.HeightAt(x)-.03f+lift,-.12f)),wristValid=true};
+            position=ribbon.transform.TransformPoint(manager.design.ArcPoint(x,ribbon.HeightAt(x)+lift)),
+            wrist=ribbon.transform.TransformPoint(manager.design.ArcPoint(x,ribbon.HeightAt(x)-.03f+lift)+Vector3.back*.12f),wristValid=true};
         // Pinch at x, lift, then let the song play `seconds` while the hand stays lifted.
         void HoldWhilePlaying(float x,float seconds)
         {
@@ -42,6 +46,28 @@ namespace RemixTable.Tests
         }
         AutomationEdit Edit(ParameterType type) => manager.automation.edits.Find(e=>e.parameter==type);
         [Test] public void EditModeIsTheDefault() => Assert.IsFalse(audio.LiveMode);
+        [TestCase(false,Mode.Volume,-1)] [TestCase(false,Mode.Volume,1)]
+        [TestCase(false,Mode.Filter,-1)] [TestCase(false,Mode.Filter,1)]
+        [TestCase(true,Mode.Volume,-1)] [TestCase(true,Mode.Volume,1)]
+        [TestCase(true,Mode.Filter,-1)] [TestCase(true,Mode.Filter,1)]
+        public void BothModesAcquireSidesResizeAndPreserveTheAuthoredParameter(bool live,Mode mode,int side)
+        {
+            audio.LiveMode=live;gestures.Mode=mode;
+            float x=side*manager.design.width*.45f;
+            gestures.ProcessHands(Hand(x,0),default,.016f);
+            Assert.AreSame(ribbon,gestures.ActiveRibbon);
+            gestures.ProcessHands(Hand(x,.03f),default,.016f);
+            var parameter=mode==Mode.Volume?ParameterType.Gain:ParameterType.Effect;
+            var edit=Edit(parameter);Assert.NotNull(edit);
+            float value=edit.value;
+            gestures.ProcessHands(Hand(x,.03f),Hand(side*manager.design.width*.5f,0),.016f);
+            Assert.AreEqual(RibbonInteractionManager.GestureState.TwoHandRegion,gestures.State);
+            Assert.AreEqual(ribbon.regionStart,edit.start);Assert.AreEqual(ribbon.regionEnd,edit.end);
+            Assert.AreEqual(value,edit.value);
+            Assert.That(manager.zoom.VisibleSeconds,Is.EqualTo(8));
+            Assert.IsNull(Edit(mode==Mode.Volume?ParameterType.Effect:ParameterType.Gain));
+            if(edit.curve!=null) Assert.That(edit.Evaluate(Mathf.Repeat(edit.start+AutomationStore.RegionLength(edit.start,edit.end,32)*.5f,32),32),Is.EqualTo(value).Within(.0001));
+        }
         [Test] public void EditModeKeepsTheHeldRegionFixed()
         {
             HoldWhilePlaying(0,2);

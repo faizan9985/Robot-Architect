@@ -12,7 +12,7 @@ namespace RemixTable
         int owner;
         float startY, initialGain, initialEffect, endpointHold;
         bool endpoint;
-        public enum GestureState { Idle, OneHandGain, TwoHandRegion }
+        public enum GestureState { Idle, OneHandGain, TwoHandRegion, ZoomPending, Zooming }
         // Which control a one-hand hold edits; both use the same lift up/down motion, and only the selected
         // one moves. Picked with the VOLUME / FILTER buttons.
         // Volume: up = louder, down = quieter. Filter: up = thinner (high-pass), down = muffled (low-pass).
@@ -35,6 +35,9 @@ namespace RemixTable
         // How far ahead of the playhead a live hold keeps its region, and how far behind it may lag and still catch up.
         public const float LiveLead = .3f, LiveCatchUp = .5f;
         public RibbonView ActiveRibbon => active;
+        bool zoomReleaseRequired;
+        float zoomStartDistance, zoomStartWindow;
+        public bool ZoomReleaseRequired => zoomReleaseRequired;
         // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
         public bool IsFiltering => active!=null && effectEdit!=null;
         public float FilterEffect => effectEdit!=null ? effectEdit.value : 0;
@@ -60,6 +63,22 @@ namespace RemixTable
         public void ProcessHands(HandSample left, HandSample right, float deltaTime)
         {
             hands[0]=left; hands[1]=right;
+            if(zoomReleaseRequired)
+            {
+                // Unknown tracking is never evidence that the user released a pinch.
+                if(left.valid && right.valid && !left.pinch && !right.pinch) zoomReleaseRequired=false;
+                return;
+            }
+            if(State==GestureState.ZoomPending || State==GestureState.Zooming)
+            {
+                if(!left.valid || !right.valid || !left.pinch || !right.pinch || manager.IsEditing ||
+                    (manager.palmMenuCanvas!=null && manager.palmMenuCanvas.gameObject.activeInHierarchy)) { Cancel(); return; }
+                float distance=Vector3.Distance(left.position,right.position);
+                if(State==GestureState.ZoomPending && Mathf.Abs(distance-zoomStartDistance)<manager.design.zoomMovementThreshold) return;
+                State=GestureState.Zooming;
+                manager.zoom.Request(TimelineZoom.GestureWindow(zoomStartWindow,zoomStartDistance,distance,manager.design.zoomGestureSensitivity));
+                return; // A zoom session can never acquire a ribbon, even if a hand enters one.
+            }
             if (active == null)
             {
                 for(int h=0;h<2;h++) if(hands[h].valid && hands[h].pinch)
@@ -72,7 +91,20 @@ namespace RemixTable
                     }
                     if(nearest!=null) { Begin(nearest,h);break; }
                 }
-                if (active == null) return;
+                if (active == null)
+                {
+                    if(manager.design.curvedTimeline && !manager.IsEditing && left.valid && right.valid && left.pinch && right.pinch &&
+                        (manager.palmMenuCanvas==null || !manager.palmMenuCanvas.gameObject.activeInHierarchy) && InZoomWorkspace(left.position) && InZoomWorkspace(right.position))
+                    {
+                        zoomStartDistance=Vector3.Distance(left.position,right.position);
+                        if(zoomStartDistance>=.12f)
+                        {
+                            zoomStartWindow=manager.zoom.VisibleSeconds;
+                            State=GestureState.ZoomPending;
+                        }
+                    }
+                    return;
+                }
             }
             var primary=hands[owner];var secondary=hands[1-owner];
             if(!active.isActiveAndEnabled || !active.selected) { Cancel(); return; }
@@ -88,14 +120,24 @@ namespace RemixTable
             bool second=secondary.valid && secondary.pinch;
             if(second)
             {
-                if(active.wholeStem) { active.wholeStem=false; gainEdit=null; }
-                State=GestureState.TwoHandRegion;endpoint=false;effectEdit=null;
+                if(active.wholeStem) { active.wholeStem=false; gainEdit=effectEdit=null; }
+                State=GestureState.TwoHandRegion;endpoint=false;
                 float x1=active.LocalX(primary.position),x2=active.LocalX(secondary.position);
                 active.regionStart=active.Timestamp(Mathf.Min(x1,x2));active.regionEnd=active.Timestamp(Mathf.Max(x1,x2));
                 // Resize an edit already authored in this session without changing its gain.
                 if(gainEdit!=null)
                 {
                     gainEdit.start=active.regionStart;gainEdit.end=active.regionEnd;manager.automation.Upsert(gainEdit);
+                }
+                if(effectEdit!=null)
+                {
+                    effectEdit.start=active.regionStart;effectEdit.end=active.regionEnd;
+                    if(effectEdit.curve!=null)
+                    {
+                        float length=Mathf.Max(.01f,AutomationStore.RegionLength(active.regionStart,active.regionEnd,manager.clock.duration));
+                        effectEdit.curve=new AnimationCurve(new Keyframe(0,0),new Keyframe(length*.5f,effectEdit.value),new Keyframe(length,0));
+                    }
+                    manager.automation.Upsert(effectEdit);
                 }
                 return;
             }
@@ -116,6 +158,13 @@ namespace RemixTable
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
             if(mode==ControlMode.Filter && (effectEdit!=null || moved))
                 Write(ref effectEdit,ParameterType.Effect,manager.design.MapDragFilter(initialEffect,displacement));
+        }
+        bool InZoomWorkspace(Vector3 world)
+        {
+            if(manager.workspace==null) return false;
+            var d=manager.design;var local=manager.workspace.InverseTransformPoint(world);
+            // A forward seated volume excludes hands behind the initial seated center and extreme reaches.
+            return Mathf.Abs(local.x)<=.65f && local.z>=-d.Radius+.12f && local.z<=.18f && Mathf.Abs(local.y)<=.5f;
         }
         HandSample Read(XRHand hand,bool wasPinching)
         {
@@ -155,14 +204,14 @@ namespace RemixTable
             State=GestureState.OneHandGain;
             startY=active.transform.InverseTransformPoint(LiftPoint(hands[owner])).y;
             initialGain=gainEdit!=null ? AutomationStore.SafeGain(gainEdit.value) : Value(ParameterType.Gain);
-            initialEffect=Value(ParameterType.Effect);effectEdit=null;
+            initialEffect=effectEdit!=null ? effectEdit.value : Value(ParameterType.Effect);
         }
         void Begin(RibbonView ribbon,int h)
         {
             active=ribbon;owner=h;active.SetSelected(true);active.wholeStem=false;
             float t=active.Timestamp(active.LocalX(hands[h].position));
             active.regionStart=Mathf.Repeat(t-.3f,manager.clock.duration);active.regionEnd=Mathf.Repeat(t+.3f,manager.clock.duration);
-            firstPosition=active.transform.InverseTransformPoint(hands[h].position);endpoint=Mathf.Abs(firstPosition.x)>manager.design.width*.43f;endpointHold=0;
+            firstPosition=active.transform.InverseTransformPoint(hands[h].position);endpoint=Mathf.Abs(active.LocalX(hands[h].position))>manager.design.width*(manager.design.curvedTimeline ? manager.design.interactiveAngle/manager.design.arcAngle*.43f : .43f);endpointHold=0;
             gainEdit=effectEdit=null;RebaseGain();
         }
         float Value(ParameterType type)
@@ -197,7 +246,9 @@ namespace RemixTable
             else if(edit.curve!=null) edit.curve.MoveKey(1,new Keyframe(AutomationStore.RegionLength(edit.start,edit.end,manager.clock.duration)*.5f,value));
             edit.value=value;manager.automation.Upsert(edit);
         }
-        public void Cancel() { if(active!=null) active.SetSelected(false);active=null;State=GestureState.Idle;gainEdit=effectEdit=null;hands[0]=hands[1]=default; }
+        public void Cancel() { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) active.SetSelected(false);active=null;State=GestureState.Idle;gainEdit=effectEdit=null;hands[0]=hands[1]=default; }
         void OnDisable() => Cancel();
+        void OnApplicationPause(bool paused) { if(paused) Cancel(); }
+        void OnApplicationFocus(bool focused) { if(!focused) Cancel(); }
     }
 }
