@@ -11,19 +11,46 @@ namespace RemixTable
         RibbonView active;
         int owner;
         float startY, initialGain, initialEffect, endpointHold;
-        float previousRoll, accumulatedRoll;
-        bool previousRollValid;
         bool endpoint;
         public enum GestureState { Idle, OneHandGain, TwoHandRegion, ZoomPending, Zooming }
+        // Which control a one-hand hold edits; both use the same lift up/down motion, and only the selected
+        // one moves. Picked with the VOLUME / FILTER buttons.
+        // Volume: up = louder, down = quieter. Filter: up = thinner (high-pass), down = muffled (low-pass).
+        public enum ControlMode { Volume, Filter }
+        [SerializeField] ControlMode mode = ControlMode.Volume;
+        public ControlMode Mode
+        {
+            get => mode;
+            set
+            {
+                if (mode == value) return;
+                mode = value;
+                // Switching mid-hold keeps what was already set and continues from the hand's current pose.
+                if (active != null && State == GestureState.OneHandGain) RebaseGain();
+            }
+        }
         public GestureState State { get; private set; }
+        // LIVE playback: the song keeps playing while a ribbon is held (see RemixAudioManager.LiveMode).
+        bool Live => manager.audioManager != null && manager.audioManager.LiveMode;
+        // How far ahead of the playhead a live hold keeps its region, and how far behind it may lag and still catch up.
+        public const float LiveLead = .3f, LiveCatchUp = .5f;
         public RibbonView ActiveRibbon => active;
         bool zoomReleaseRequired;
         float zoomStartDistance, zoomStartWindow;
         public bool ZoomReleaseRequired => zoomReleaseRequired;
+        // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
+        public bool IsFiltering => active!=null && effectEdit!=null;
+        public float FilterEffect => effectEdit!=null ? effectEdit.value : 0;
+        // Live lift readout: the gain being written by this hold.
+        public bool IsLifting => active!=null && gainEdit!=null;
+        public float LiftGain => gainEdit!=null ? gainEdit.value : 1;
         Vector3 firstPosition;
         AutomationEdit gainEdit, effectEdit;
         readonly HandSample[] hands = new HandSample[2];
-        public struct HandSample { public bool valid, pinch; public Vector3 position; public float roll; public bool rollValid; }
+        // position = pinch point (selection, regions). wrist = lift reference: it is steadier than the
+        // fingertips, which wobble as the hand rotates slightly while lifting.
+        public struct HandSample { public bool valid, pinch; public Vector3 position; public Vector3 wrist; public bool wristValid; }
+        static Vector3 LiftPoint(HandSample hand) => hand.wristValid ? hand.wrist : hand.position;
         void Update()
         {
             SubsystemManager.GetSubsystems(systems);
@@ -93,14 +120,24 @@ namespace RemixTable
             bool second=secondary.valid && secondary.pinch;
             if(second)
             {
-                if(active.wholeStem) { active.wholeStem=false; gainEdit=null; }
-                State=GestureState.TwoHandRegion;endpoint=false;effectEdit=null;
+                if(active.wholeStem) { active.wholeStem=false; gainEdit=effectEdit=null; }
+                State=GestureState.TwoHandRegion;endpoint=false;
                 float x1=active.LocalX(primary.position),x2=active.LocalX(secondary.position);
                 active.regionStart=active.Timestamp(Mathf.Min(x1,x2));active.regionEnd=active.Timestamp(Mathf.Max(x1,x2));
                 // Resize an edit already authored in this session without changing its gain.
                 if(gainEdit!=null)
                 {
                     gainEdit.start=active.regionStart;gainEdit.end=active.regionEnd;manager.automation.Upsert(gainEdit);
+                }
+                if(effectEdit!=null)
+                {
+                    effectEdit.start=active.regionStart;effectEdit.end=active.regionEnd;
+                    if(effectEdit.curve!=null)
+                    {
+                        float length=Mathf.Max(.01f,AutomationStore.RegionLength(active.regionStart,active.regionEnd,manager.clock.duration));
+                        effectEdit.curve=new AnimationCurve(new Keyframe(0,0),new Keyframe(length*.5f,effectEdit.value),new Keyframe(length,0));
+                    }
+                    manager.automation.Upsert(effectEdit);
                 }
                 return;
             }
@@ -112,13 +149,15 @@ namespace RemixTable
                 if(endpointHold>.65f && !active.wholeStem) {active.wholeStem=true;gainEdit=effectEdit=null;RebaseGain();}
             }
             else endpoint=false;
-            float displacement=local.y-startY;
-            if(primary.rollValid && previousRollValid) accumulatedRoll+=Mathf.DeltaAngle(previousRoll,primary.roll);
-            previousRoll=primary.roll;previousRollValid=primary.rollValid;
-            if(Mathf.Abs(displacement)>manager.design.gainDragDeadzone || gainEdit!=null)
+            if(Live && !active.wholeStem) FollowPlayhead();
+            // Only the selected control is written. It wakes up past its dead zone and then follows the hand
+            // for the rest of the hold, so it can be pushed one way and brought back (or past neutral) freely.
+            float displacement=active.transform.InverseTransformPoint(LiftPoint(primary)).y-startY;
+            bool moved=Mathf.Abs(displacement)>manager.design.gainDragDeadzone;
+            if(mode==ControlMode.Volume && (gainEdit!=null || moved))
                 Write(ref gainEdit,ParameterType.Gain,manager.design.MapDragGain(initialGain,displacement));
-            else if(primary.rollValid && Mathf.Abs(accumulatedRoll)>10)
-                Write(ref effectEdit,ParameterType.Effect,Mathf.Clamp01(initialEffect+accumulatedRoll/180f));
+            if(mode==ControlMode.Filter && (effectEdit!=null || moved))
+                Write(ref effectEdit,ParameterType.Effect,manager.design.MapDragFilter(initialEffect,displacement));
         }
         bool InZoomWorkspace(Vector3 world)
         {
@@ -135,8 +174,8 @@ namespace RemixTable
             var sample=SamplePinch(index.position,thumb.position,tracking,wasPinching);
             if(hand.GetJoint(XRHandJointID.Wrist).TryGetPose(out var wrist))
             {
-                sample.roll=(tracking!=null?tracking.rotation*wrist.rotation:wrist.rotation).eulerAngles.z;
-                sample.rollValid=true;
+                sample.wrist=tracking!=null?tracking.TransformPoint(wrist.position):wrist.position;
+                sample.wristValid=true;
             }
             return sample;
         }
@@ -145,12 +184,27 @@ namespace RemixTable
             Vector3 local=(index+thumb)*.5f;
             return new HandSample{valid=true,pinch=Vector3.Distance(index,thumb)<(wasPinching?.035f:.024f),position=tracking!=null?tracking.TransformPoint(local):local};
         }
+        // LIVE: a one-hand region is only ~0.6 s of song, which would scroll past the playhead almost at once.
+        // Once the playhead reaches the held region, keep stretching its end just ahead of the playhead so the
+        // change is heard (and recorded) for as long as the hold lasts. A region still ahead is left alone.
+        void FollowPlayhead()
+        {
+            float duration=manager.clock.duration;
+            if(duration<=LiveLead*2) return;
+            float played=Mathf.Repeat(manager.clock.Time-active.regionStart,duration);
+            float length=AutomationStore.RegionLength(active.regionStart,active.regionEnd,duration);
+            float wanted=played+LiveLead;
+            if(played>length+LiveCatchUp || wanted<=length || wanted>duration-LiveLead) return;
+            active.regionEnd=Mathf.Repeat(manager.clock.Time+LiveLead,duration);
+            foreach(var edit in new[]{gainEdit,effectEdit})
+                if(edit!=null && !edit.wholeStem && edit.curve==null) { edit.start=active.regionStart; edit.end=active.regionEnd; manager.automation.Upsert(edit); }
+        }
         void RebaseGain()
         {
             State=GestureState.OneHandGain;
-            startY=active.transform.InverseTransformPoint(hands[owner].position).y;
+            startY=active.transform.InverseTransformPoint(LiftPoint(hands[owner])).y;
             initialGain=gainEdit!=null ? AutomationStore.SafeGain(gainEdit.value) : Value(ParameterType.Gain);
-            previousRoll=hands[owner].roll;previousRollValid=hands[owner].rollValid;accumulatedRoll=0;initialEffect=Value(ParameterType.Effect);effectEdit=null;
+            initialEffect=effectEdit!=null ? effectEdit.value : Value(ParameterType.Effect);
         }
         void Begin(RibbonView ribbon,int h)
         {
@@ -180,7 +234,8 @@ namespace RemixTable
             if(edit==null)
             {
                 edit=new AutomationEdit {songId=manager.library.Current.id,stem=active.stem,start=active.regionStart,end=active.regionEnd,wholeStem=active.wholeStem,parameter=type};
-                if(!edit.wholeStem && type!=ParameterType.Gain)
+                // Live holds stretch over time, so their filter is a flat plateau like gain instead of a peak.
+                if(!edit.wholeStem && type!=ParameterType.Gain && !Live)
                 {
                     float baseline=type==ParameterType.Gain?1:0;
                     float length=Mathf.Max(.01f,AutomationStore.RegionLength(edit.start,edit.end,manager.clock.duration));

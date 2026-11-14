@@ -134,7 +134,7 @@ namespace RemixTable
                 vertices[v]=d.ArcPoint(x,outerLow); vertices[v+1]=d.ArcPoint(x,outerHigh);
                 float height=Mathf.Max(.00001f,outerHigh-outerLow);
                 edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,0);
-                Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
+                Color c=effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
                 colors[v]=colors[v+1]=c;

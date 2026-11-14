@@ -43,9 +43,19 @@ namespace RemixTable.Editor
             RemixSeatedLayout.Validate();
             RemixSeatedLayout.ValidateZoom();
             RibbonVisualValidation.Validate();
+            RemixModeLayout.Validate();
             var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
             RemixSceneBuilder.Require(manager.design.interactiveAngle==180 && manager.design.arcAngle==180,"full arc editing");
+            RemixSceneBuilder.Require(UnityEngine.Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include,FindObjectsSortMode.None).Length==1,"one AudioListener");
             File.WriteAllText("Logs/RemixZoomSceneValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
+        }
+        public static void SaveMergedScene()
+        {
+            ValidateScene();
+            var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            if(!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Merged scene could not be saved");
+            ValidateScene();
         }
         static void Run(string mode)
         {

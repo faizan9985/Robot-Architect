@@ -14,6 +14,11 @@ namespace RemixTable
         [Min(.01f)] public float gainGestureSensitivity = 1;
         [Min(.01f)] public float gainDragDistance = .12f;
         [Min(0)] public float gainDragDeadzone = .008f;
+        [Header("Filter (lift in FILTER mode)")]
+        [Tooltip("Hand lift (meters) from neutral to a full high-pass (up) or low-pass (down) sweep.")]
+        [Min(.01f)] public float filterDragDistance = .12f;
+        public float MapDragFilter(float initial, float localDisplacement) =>
+            StemFilter.SafeEffect(initial + localDisplacement / Mathf.Max(.01f, filterDragDistance));
         public float MapDragGain(float initial, float localDisplacement)
         {
             float low=AutomationStore.SafeGain(minGain), high=Mathf.Max(low,AutomationStore.SafeGain(maxGain));

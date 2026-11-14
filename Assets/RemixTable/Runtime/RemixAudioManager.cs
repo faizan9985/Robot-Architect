@@ -15,6 +15,14 @@ namespace RemixTable
         readonly HashSet<Behaviour> editingOwners = new HashSet<Behaviour>();
         public int EditingPauseCount => editingOwners.Count;
         public bool IsManuallyPaused => manualPaused;
+        // EDIT (default): holding a ribbon pauses the song while you shape it.
+        // LIVE: playback keeps running while you edit, so changes are heard as the song plays.
+        [SerializeField] bool liveMode;
+        public bool LiveMode
+        {
+            get => liveMode;
+            set { if (liveMode == value) return; liveMode = value; ApplyPlaybackState(); }
+        }
         float SafeHeadroom => Mathf.Clamp(AutomationStore.SafeGain(headroom),0,.06f);
         public void BeginEditing(Behaviour owner)
         {
@@ -29,12 +37,42 @@ namespace RemixTable
         }
         void ApplyPlaybackState()
         {
-            if (manualPaused || suspended || editingOwners.Count > 0) PauseTransport();
+            if (manualPaused || suspended || (!liveMode && editingOwners.Count > 0)) PauseTransport();
             else ResumeTransport();
         }
         readonly float[] samples = new float[128];
         readonly float[] levels = new float[4];
+        readonly float[] effects = new float[4];
+        AudioLowPassFilter[] lowpass;
+        AudioHighPassFilter[] highpass;
         public float Level(StemId stem) => levels[(int)stem];
+        public float Effect(StemId stem) => effects[(int)stem];
+        public AudioLowPassFilter Lowpass(StemId stem) { EnsureFilters(); return lowpass[(int)stem]; }
+        public AudioHighPassFilter Highpass(StemId stem) { EnsureFilters(); return highpass[(int)stem]; }
+        // Filters live on each stem source's GameObject so they only process that stem.
+        void EnsureFilters()
+        {
+            if (lowpass != null && lowpass.Length == sources.Length) return;
+            lowpass = new AudioLowPassFilter[sources.Length];
+            highpass = new AudioHighPassFilter[sources.Length];
+            for (int i = 0; i < sources.Length; i++)
+            {
+                var go = sources[i].gameObject;
+                lowpass[i] = go.GetComponent<AudioLowPassFilter>();
+                if (lowpass[i] == null) lowpass[i] = go.AddComponent<AudioLowPassFilter>();
+                highpass[i] = go.GetComponent<AudioHighPassFilter>();
+                if (highpass[i] == null) highpass[i] = go.AddComponent<AudioHighPassFilter>();
+                ApplyFilter(i, 0);
+            }
+        }
+        void ApplyFilter(int i, float effect)
+        {
+            effects[i] = effect;
+            lowpass[i].cutoffFrequency = StemFilter.LowpassCutoff(effect);
+            lowpass[i].lowpassResonanceQ = effect < 0 ? StemFilter.Resonance(effect) : StemFilter.BaseResonance;
+            highpass[i].cutoffFrequency = StemFilter.HighpassCutoff(effect);
+            highpass[i].highpassResonanceQ = effect > 0 ? StemFilter.Resonance(effect) : StemFilter.BaseResonance;
+        }
         public void Load(SongMetadata song)
         {
             Stop();
@@ -56,6 +94,8 @@ namespace RemixTable
                 sources[i].volume = SafeHeadroom;
             }
             manager.clock.Reset((float)((double)first.samples / first.frequency));
+            EnsureFilters();
+            for (int i = 0; i < sources.Length; i++) ApplyFilter(i, 0);
             Ready = true;
             Resume();
         }
@@ -119,6 +159,8 @@ namespace RemixTable
                     manager.design != null ? manager.design.gainBoundaryFade : .06f);
                 // Preserve the measured source-peak mix bound, even if Inspector headroom is raised.
                 sources[i].volume = Mathf.Lerp(sources[i].volume, SafeHeadroom * gain, blend);
+                float effect = StemFilter.SafeEffect(manager.automation.Evaluate(manager.library.Current.id, (StemId)i, ParameterType.Effect, manager.clock.Time, manager.clock.duration));
+                ApplyFilter(i, Mathf.Lerp(effects[i], effect, blend));
                 float sum = 0;
                 if (running && AudioSettings.dspTime >= ScheduledStart)
                 {
