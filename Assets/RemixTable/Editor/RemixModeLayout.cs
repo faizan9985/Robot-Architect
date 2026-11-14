@@ -10,9 +10,11 @@ namespace RemixTable.Editor
     // so it can run on the existing scene without re-applying the whole seated layout.
     public static class RemixModeLayout
     {
-        public const string CanvasName = "ModeCanvas";
+        public const string CanvasName = "ModeCanvas", PlaybackCanvasName = "PlaybackModeCanvas";
         public const float Height = .07f, Gap = .008f;
         public static float CanvasY(RemixDesign d) => d.TransportY - d.transportHeight * .5f - Gap - Height * .5f;
+        // EDIT / LIVE row sits directly under the VOLUME / FILTER row.
+        public static float PlaybackCanvasY(RemixDesign d) => CanvasY(d) - Height - Gap;
         [MenuItem("Tools/Remix Table/Add Volume-Filter Mode Buttons")]
         public static void Apply()
         {
@@ -24,19 +26,28 @@ namespace RemixTable.Editor
             EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets();
             Validate();
         }
-        public static RemixModeSelector Build(RemixTableManager manager, RemixTransport transport)
+        // Same menu step; both rows are idempotent, so either item (re)builds both.
+        [MenuItem("Tools/Remix Table/Add Live-Edit Playback Buttons")]
+        public static void ApplyPlayback() => Apply();
+        static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y)
         {
-            var d = manager.design; var font = transport.songTitle.font;
+            var d = manager.design;
             var transportCanvas = transport.GetComponent<Canvas>();
-            var rect = RemixSeatedLayout.Rect(manager.workspace, CanvasName, Vector2.zero, new Vector2(d.panelWidth * 1000, Height * 1000));
+            var rect = RemixSeatedLayout.Rect(manager.workspace, name, Vector2.zero, new Vector2(d.panelWidth * 1000, Height * 1000));
             rect.localScale = Vector3.one * .001f; rect.localRotation = Quaternion.identity;
-            rect.localPosition = new Vector3(0, CanvasY(d), transport.transform.localPosition.z);
+            rect.localPosition = new Vector3(0, y, transport.transform.localPosition.z);
             var canvas = rect.GetComponent<Canvas>(); if (canvas == null) canvas = rect.gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace; canvas.worldCamera = transportCanvas.worldCamera;
             canvas.additionalShaderChannels = transportCanvas.additionalShaderChannels;
             if (canvas.GetComponent<TrackedDeviceGraphicRaycaster>() == null) canvas.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
             var background = rect.GetComponent<Image>(); if (background == null) background = rect.gameObject.AddComponent<Image>();
             background.color = new Color(.018f, .026f, .04f, 1); background.raycastTarget = false;
+            return rect;
+        }
+        public static RemixModeSelector Build(RemixTableManager manager, RemixTransport transport)
+        {
+            var d = manager.design; var font = transport.songTitle.font;
+            var rect = Row(manager, transport, CanvasName, CanvasY(d));
             var selector = rect.GetComponent<RemixModeSelector>(); if (selector == null) selector = rect.gameObject.AddComponent<RemixModeSelector>();
             selector.manager = manager;
             RemixSeatedLayout.Text(rect, "ModeHeading", "PINCH EDITS", new Vector2(-235, 0), new Vector2(170, 40), 15, font);
@@ -46,6 +57,23 @@ namespace RemixTable.Editor
             selector.volumeButton.image.color = selector.selectedColor; selector.filterButton.image.color = selector.idleColor;
             transport.palmInstructions.text = RemixTransport.Guidance;
             EditorUtility.SetDirty(selector); EditorUtility.SetDirty(transport.palmInstructions);
+            BuildPlayback(manager, transport);
+            return selector;
+        }
+        public static RemixPlaybackModeSelector BuildPlayback(RemixTableManager manager, RemixTransport transport)
+        {
+            var font = transport.songTitle.font;
+            var rect = Row(manager, transport, PlaybackCanvasName, PlaybackCanvasY(manager.design));
+            var selector = rect.GetComponent<RemixPlaybackModeSelector>(); if (selector == null) selector = rect.gameObject.AddComponent<RemixPlaybackModeSelector>();
+            selector.manager = manager;
+            RemixSeatedLayout.Text(rect, "PlaybackHeading", "PLAYBACK", new Vector2(-235, 0), new Vector2(170, 40), 15, font);
+            selector.editButton = RemixSeatedLayout.Button(rect, "EditMode", "EDIT: PAUSE", -40, 180, font, selector.SelectEdit);
+            selector.liveButton = RemixSeatedLayout.Button(rect, "LiveMode", "LIVE: PLAY", 160, 180, font, selector.SelectLive);
+            foreach (var b in new[] { selector.editButton, selector.liveButton }) ((RectTransform)b.transform).anchoredPosition = new Vector2(((RectTransform)b.transform).anchoredPosition.x, 0);
+            bool live = manager.audioManager != null && manager.audioManager.LiveMode;
+            selector.editButton.image.color = live ? selector.idleColor : selector.selectedColor;
+            selector.liveButton.image.color = live ? selector.selectedColor : selector.idleColor;
+            EditorUtility.SetDirty(selector);
             return selector;
         }
         public static void Validate()
@@ -59,6 +87,11 @@ namespace RemixTable.Editor
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == selector && button.onClick.GetPersistentMethodName(0) == method, "mode binding " + button.name);
             var transport = RemixSceneBuilder.All<RemixTransport>(scene).Single();
             RemixSceneBuilder.Require(transport.palmInstructions.text == RemixTransport.Guidance, "palm guidance mentions modes");
+            var playback = RemixSceneBuilder.All<RemixPlaybackModeSelector>(scene).Single();
+            RemixSceneBuilder.Require(playback.manager == manager && manager.audioManager != null, "playback selector wired to manager");
+            RemixSceneBuilder.Require(playback.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace && playback.GetComponent<TrackedDeviceGraphicRaycaster>() != null, "playback canvas is pokeable world UI");
+            foreach (var (button, method) in new[] { (playback.editButton, nameof(RemixPlaybackModeSelector.SelectEdit)), (playback.liveButton, nameof(RemixPlaybackModeSelector.SelectLive)) })
+                RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == playback && button.onClick.GetPersistentMethodName(0) == method, "playback binding " + button.name);
             Debug.Log("REMIX_MODE_VALIDATION_PASS");
         }
     }

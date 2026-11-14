@@ -19,7 +19,7 @@ namespace RemixTable
             string filter=!filterPercent.HasValue ? null : filterPercent.Value<0 ? $"LOW {-filterPercent.Value}%" : filterPercent.Value>0 ? $"HIGH {filterPercent.Value}%" : "FLAT";
             return volume!=null && filter!=null ? volume+"  "+filter : volume ?? filter ?? "";
         }
-        bool displayedManual, displayedEditing, displayedReady;
+        bool displayedManual, displayedEditing, displayedReady, displayedLive;
         bool dirty=true;
         void OnEnable() { manager.library.SongChanged+=SongChanged;dirty=true; }
         void OnDisable() { if(manager!=null && manager.library!=null) manager.library.SongChanged-=SongChanged; }
@@ -41,12 +41,12 @@ namespace RemixTable
         void Update()
         {
             var audio=manager.audioManager;
-            bool editing=audio.EditingPauseCount>0, manual=audio.IsManuallyPaused;
+            bool editing=audio.EditingPauseCount>0, manual=audio.IsManuallyPaused, live=audio.LiveMode;
             int second=Mathf.FloorToInt(manager.clock.Time);
             var gestures=manager.interactions;
             int? volume=gestures!=null && gestures.IsLifting ? Mathf.RoundToInt(gestures.LiftGain*100) : (int?)null;
             int? filter=gestures!=null && gestures.IsFiltering ? Mathf.RoundToInt(gestures.FilterEffect*100) : (int?)null;
-            if(!dirty && second==displayedSecond && manual==displayedManual && editing==displayedEditing && audio.Ready==displayedReady && volume==displayedVolume && filter==displayedFilter) return;
+            if(!dirty && second==displayedSecond && manual==displayedManual && editing==displayedEditing && audio.Ready==displayedReady && live==displayedLive && volume==displayedVolume && filter==displayedFilter) return;
             displayedVolume=volume;displayedFilter=filter;
             string gesture=GestureLabel(volume,filter);
             if(dirty) songTitle.text=manager.library.Current.title;
@@ -54,10 +54,10 @@ namespace RemixTable
             previousSong.interactable=nextSong.interactable=manager.library.songs.Length>1;
             playPauseLabel.text=!audio.Ready ? "No audio" : manual ? "Play" : "Pause";
             int total=Mathf.FloorToInt(manager.clock.duration);
-            // Playback is paused while holding a ribbon, so the time slot shows the live gesture readout instead.
-            playbackTime.text=!audio.Ready ? "AUDIO UNAVAILABLE" : gesture.Length>0 ? gesture :
-                $"{(editing ? "EDIT  " : "")}{second/60:00}:{second%60:00} / {total/60:00}:{total%60:00}";
-            displayedSecond=second;displayedManual=manual;displayedEditing=editing;displayedReady=audio.Ready;dirty=false;
+            // While holding a ribbon the time slot shows the gesture readout (in EDIT mode playback is paused anyway).
+            playbackTime.text=!audio.Ready ? "AUDIO UNAVAILABLE" : gesture.Length>0 ? (live ? "LIVE  "+gesture : gesture) :
+                $"{(live ? "LIVE  " : editing ? "EDIT  " : "")}{second/60:00}:{second%60:00} / {total/60:00}:{total%60:00}";
+            displayedSecond=second;displayedManual=manual;displayedEditing=editing;displayedReady=audio.Ready;displayedLive=live;dirty=false;
         }
     }
 }

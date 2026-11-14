@@ -15,6 +15,14 @@ namespace RemixTable
         readonly HashSet<Behaviour> editingOwners = new HashSet<Behaviour>();
         public int EditingPauseCount => editingOwners.Count;
         public bool IsManuallyPaused => manualPaused;
+        // EDIT (default): holding a ribbon pauses the song while you shape it.
+        // LIVE: playback keeps running while you edit, so changes are heard as the song plays.
+        [SerializeField] bool liveMode;
+        public bool LiveMode
+        {
+            get => liveMode;
+            set { if (liveMode == value) return; liveMode = value; ApplyPlaybackState(); }
+        }
         float SafeHeadroom => Mathf.Clamp(AutomationStore.SafeGain(headroom),0,.06f);
         public void BeginEditing(Behaviour owner)
         {
@@ -29,7 +37,7 @@ namespace RemixTable
         }
         void ApplyPlaybackState()
         {
-            if (manualPaused || suspended || editingOwners.Count > 0) PauseTransport();
+            if (manualPaused || suspended || (!liveMode && editingOwners.Count > 0)) PauseTransport();
             else ResumeTransport();
         }
         readonly float[] samples = new float[128];

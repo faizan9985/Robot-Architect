@@ -30,6 +30,10 @@ namespace RemixTable
             }
         }
         public GestureState State { get; private set; }
+        // LIVE playback: the song keeps playing while a ribbon is held (see RemixAudioManager.LiveMode).
+        bool Live => manager.audioManager != null && manager.audioManager.LiveMode;
+        // How far ahead of the playhead a live hold keeps its region, and how far behind it may lag and still catch up.
+        public const float LiveLead = .3f, LiveCatchUp = .5f;
         public RibbonView ActiveRibbon => active;
         // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
         public bool IsFiltering => active!=null && effectEdit!=null;
@@ -103,6 +107,7 @@ namespace RemixTable
                 if(endpointHold>.65f && !active.wholeStem) {active.wholeStem=true;gainEdit=effectEdit=null;RebaseGain();}
             }
             else endpoint=false;
+            if(Live && !active.wholeStem) FollowPlayhead();
             // Only the selected control is written. It wakes up past its dead zone and then follows the hand
             // for the rest of the hold, so it can be pushed one way and brought back (or past neutral) freely.
             float displacement=active.transform.InverseTransformPoint(LiftPoint(primary)).y-startY;
@@ -129,6 +134,21 @@ namespace RemixTable
         {
             Vector3 local=(index+thumb)*.5f;
             return new HandSample{valid=true,pinch=Vector3.Distance(index,thumb)<(wasPinching?.035f:.024f),position=tracking!=null?tracking.TransformPoint(local):local};
+        }
+        // LIVE: a one-hand region is only ~0.6 s of song, which would scroll past the playhead almost at once.
+        // Once the playhead reaches the held region, keep stretching its end just ahead of the playhead so the
+        // change is heard (and recorded) for as long as the hold lasts. A region still ahead is left alone.
+        void FollowPlayhead()
+        {
+            float duration=manager.clock.duration;
+            if(duration<=LiveLead*2) return;
+            float played=Mathf.Repeat(manager.clock.Time-active.regionStart,duration);
+            float length=AutomationStore.RegionLength(active.regionStart,active.regionEnd,duration);
+            float wanted=played+LiveLead;
+            if(played>length+LiveCatchUp || wanted<=length || wanted>duration-LiveLead) return;
+            active.regionEnd=Mathf.Repeat(manager.clock.Time+LiveLead,duration);
+            foreach(var edit in new[]{gainEdit,effectEdit})
+                if(edit!=null && !edit.wholeStem && edit.curve==null) { edit.start=active.regionStart; edit.end=active.regionEnd; manager.automation.Upsert(edit); }
         }
         void RebaseGain()
         {
@@ -165,7 +185,8 @@ namespace RemixTable
             if(edit==null)
             {
                 edit=new AutomationEdit {songId=manager.library.Current.id,stem=active.stem,start=active.regionStart,end=active.regionEnd,wholeStem=active.wholeStem,parameter=type};
-                if(!edit.wholeStem && type!=ParameterType.Gain)
+                // Live holds stretch over time, so their filter is a flat plateau like gain instead of a peak.
+                if(!edit.wholeStem && type!=ParameterType.Gain && !Live)
                 {
                     float baseline=type==ParameterType.Gain?1:0;
                     float length=Mathf.Max(.01f,AutomationStore.RegionLength(edit.start,edit.end,manager.clock.duration));
