@@ -31,7 +31,7 @@ All controls are on the existing `Materials/RemixDesign.asset`:
 | `waveformMotion` | .25 | Strength of the RMS/asymmetry-driven submillimeter displacement |
 | `waveformColumns` | 512 | Audio envelope bin density; set before Play Mode |
 
-The violet/orange/green/cyan palette, peripheral dimming and selection brightness remain. `RibbonEnergy.shader` renders a translucent body, luminous edge strands and a soft external fringe with premultiplied blending. The mesh carries core-edge coordinates, so thin silence and louder envelopes use the same core/halo treatment. No bloom, duplicate glow mesh, extra pass, texture, particle system or light is required. The fringe is local to the ribbon; it does not illuminate nearby scene objects.
+The violet/orange/green/cyan palette and selection brightness remain. The full editable arc uses equal base brightness, without peripheral dimming. `RibbonEnergy.shader` renders a translucent body, luminous edge strands and a soft external fringe with premultiplied blending. The mesh carries core-edge coordinates, so thin silence and louder envelopes use the same core/halo treatment. No bloom, duplicate glow mesh, extra pass, texture, particle system or light is required. The fringe is local to the ribbon; it does not illuminate nearby scene objects.
 
 ## Spatial and runtime budgets
 

@@ -63,7 +63,7 @@ namespace RemixTable.Tests
             Assert.That(CoreAt(.5f).x,Is.EqualTo(-design.waveformBaseline).Within(.00001));
             float hit=0;for(float t=3.30f;t<3.35f;t+=.002f)hit=Mathf.Max(hit,CoreAt(t).y);
             Assert.Greater(hit,quiet*3);Assert.Greater(hit,design.WaveformHeight(.85f)*.9f);
-            // A silent timestamp within the unchanged central 90-degree editing zone.
+            // Silence remains selectable through the stable lane baseline.
             Assert.IsTrue(ribbon.CanSelectAt(ribbon.SurfacePoint(-design.width*.025f),out _));
         }
         [Test] public void SmoothingHasAnExplicitPeakFloorAndNeverFillsSilence()
@@ -113,6 +113,23 @@ namespace RemixTable.Tests
                 Assert.That(new Vector2(p.x,p.z+design.Radius).magnitude,Is.EqualTo(.8).Within(.00001));
                 Assert.Less(Mathf.Abs(p.y),design.laneHeight*.5f);
             }
+        }
+        [TestCase(-1f)] [TestCase(1f)] public void PeripheralGainDeformsOnlyItsRegionWithoutDimming(float side)
+        {
+            // Constant real envelope isolates spatial gain and color from sample variation.
+            cache.Initialize(51200,409600,409600,1f/32767,new byte[]{0,192,0,64,0,32},new[]{0},new[]{1});
+            ribbon.UpdateWaveform();
+            int column=Mathf.RoundToInt((.5f+side*.45f)*ribbon.CurveSegmentCount);
+            float x=(column/(float)ribbon.CurveSegmentCount-.5f)*design.width;
+            float t=ribbon.Timestamp(x);
+            var before=ribbon.WaveformMesh.vertices;var colors=ribbon.WaveformMesh.colors;
+            Assert.AreEqual(colors[ribbon.CurveSegmentCount],colors[column*2]);
+            manager.automation.Upsert(new AutomationEdit{songId="hologram",stem=StemId.Drums,parameter=ParameterType.Gain,start=t-.1f,end=t+.1f,value=2});
+            ribbon.UpdateWaveform();var after=ribbon.WaveformMesh.vertices;
+            Assert.Greater(after[column*2+1].y,before[column*2+1].y);
+            Assert.Less(after[column*2].y,before[column*2].y);
+            Assert.AreEqual(before[ribbon.CurveSegmentCount],after[ribbon.CurveSegmentCount]);
+            Assert.IsTrue(ribbon.CanSelectAt(ribbon.SurfacePoint(x),out _));
         }
         [Test] public void MotionCannotMoveSilenceOrAStoppedTimelineAndBuffersAreReused()
         {

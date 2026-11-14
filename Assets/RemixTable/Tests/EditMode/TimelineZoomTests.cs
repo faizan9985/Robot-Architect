@@ -119,8 +119,8 @@ namespace RemixTable.Tests
         }
         [Test] public void RibbonRegionWinsAndExternalOwnerPreventsZoom()
         {
-            var a=Hand(-.1f);a.position=ribbon.SurfacePoint(-.1f);
-            var b=Hand(.1f);b.position=ribbon.SurfacePoint(.1f);
+            var a=Hand(-.1f);a.position=ribbon.SurfacePoint(-manager.design.width*.45f);
+            var b=Hand(.1f);b.position=ribbon.SurfacePoint(manager.design.width*.45f);
             Tick(a,b);Assert.AreEqual(RibbonInteractionManager.GestureState.TwoHandRegion,gestures.State);
             float start=ribbon.regionStart,end=ribbon.regionEnd;
             manager.zoom.Request(32);manager.zoom.Tick(1,manager.IsEditing,.16f);

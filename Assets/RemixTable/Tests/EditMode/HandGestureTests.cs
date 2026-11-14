@@ -18,7 +18,7 @@ namespace RemixTable.Tests
             manager=root.AddComponent<RemixTableManager>();manager.enabled=false;
             manager.design=ScriptableObject.CreateInstance<RemixDesign>();
             manager.design.curvedTimeline=curved;
-            manager.design.interactiveAngle=110;
+            manager.design.interactiveAngle=180;
             manager.library=root.AddComponent<SongLibraryManager>();manager.library.songs=new[]{new SongMetadata{id="hands",duration=32}};
             manager.clock.Reset(32);manager.clock.elapsed=10;
             var go=new GameObject("ribbon");go.transform.SetParent(root.transform);
@@ -95,10 +95,27 @@ namespace RemixTable.Tests
         }
         [Test] public void EndpointHoldStillEnablesWholeStemGain()
         {
-            float x=manager.design.width*(curved ? .28f : .47f),y=ribbon.HeightAt(x);var a=Hand(x,y);
+            float x=manager.design.width*.47f,y=ribbon.HeightAt(x);var a=Hand(x,y);
             Tick(a,default,.7f);Assert.IsTrue(ribbon.wholeStem);
             Tick(Hand(x,y-.12f));Assert.IsTrue(manager.automation.edits[0].wholeStem);
             Assert.That(manager.automation.EvaluateGain("hands",StemId.Bass,20,32,.06f),Is.EqualTo(0).Within(.0001));
+        }
+        [TestCase(-1f)] [TestCase(1f)] public void SideGainAndRegionUseAngularTimestamps(float side)
+        {
+            var d=manager.design;
+            float x=side*d.width*.45f;
+            var a=Hand(x,0);Tick(a);
+            Assert.IsTrue(ribbon.selected);
+            Assert.That(ribbon.regionStart,Is.EqualTo(Mathf.Repeat(ribbon.Timestamp(x)-.3f,32)).Within(.0001));
+            Tick(Hand(x,-.06f));
+            Assert.That(manager.automation.edits[0].value,Is.EqualTo(.5f).Within(.0001));
+            Assert.IsFalse(manager.automation.edits[0].wholeStem);
+            float other=side*d.width*.5f;
+            Tick(Hand(x,-.06f),Hand(other,0));
+            Assert.AreEqual(RibbonInteractionManager.GestureState.TwoHandRegion,gestures.State);
+            Assert.That(ribbon.regionStart,Is.EqualTo(ribbon.Timestamp(Mathf.Min(x,other))).Within(.0001));
+            Assert.That(ribbon.regionEnd,Is.EqualTo(ribbon.Timestamp(Mathf.Max(x,other))).Within(.0001));
+            Assert.That(manager.automation.edits[0].value,Is.EqualTo(.5f).Within(.0001));
         }
     }
 }

@@ -53,7 +53,7 @@ namespace RemixTable
         public bool curvedTimeline;
         [Range(.5f,1.2f)] public float arcRadius = .8f;
         [Range(90,200)] public float arcAngle = 180;
-        [Range(40,110)] public float interactiveAngle = 90;
+        [Range(40,200)] public float interactiveAngle = 180;
         [Min(.1f)] public float pastSeconds = 4, futureSeconds = 4;
         [Range(.5f,1.5f)] public float arcScale = 1;
         [Header("Timeline zoom")]

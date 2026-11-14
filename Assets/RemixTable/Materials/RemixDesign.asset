@@ -58,7 +58,7 @@ MonoBehaviour:
   curvedTimeline: 1
   arcRadius: 0.8
   arcAngle: 180
-  interactiveAngle: 90
+  interactiveAngle: 180
   pastSeconds: 4
   futureSeconds: 4
   arcScale: 1

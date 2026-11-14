@@ -27,7 +27,24 @@ namespace RemixTable.Tests
             }
             Assert.AreEqual(Vector3.zero,d.ArcPoint(0));
             Assert.Greater(ribbon.Timestamp(d.width*.2f),10);Assert.Less(ribbon.Timestamp(-d.width*.2f),10);
-            Assert.IsFalse(ribbon.CanSelectAt(ribbon.SurfacePoint(d.width*.45f),out _));
+            Assert.AreEqual(180,d.interactiveAngle);
+            foreach(float side in new[]{-1f,1f})
+            {
+                foreach(float fraction in new[]{.45f,.4999f,.5f})
+                {
+                    float coordinate=side*d.width*fraction;
+                    var point=ribbon.SurfacePoint(coordinate);
+                    Assert.IsTrue(ribbon.CanSelectAt(point,out _),$"Selection at {fraction*360*side} degrees");
+                    Assert.That(ribbon.LocalX(point),Is.EqualTo(coordinate).Within(.00001));
+                    Assert.That(ribbon.Timestamp(ribbon.LocalX(point)),Is.EqualTo(Mathf.Repeat(10+coordinate/d.width*manager.zoom.VisibleSeconds,manager.clock.duration)).Within(.0001));
+                }
+                // Outside the angular extent must fail even though ArcCoordinate clamps it.
+                Assert.IsFalse(ribbon.CanSelectAt(ribbon.SurfacePoint(side*d.width*.5001f),out _));
+                float x=side*d.width*.45f;
+                var radial=d.ArcPoint(x);radial.z+=d.Radius;radial=radial.normalized;
+                Assert.IsFalse(ribbon.CanSelectAt(ribbon.SurfacePoint(x)+ribbon.transform.TransformVector(radial*(d.interactionDepth*.5f+.001f)),out _));
+                Assert.IsFalse(ribbon.CanSelectAt(ribbon.SurfacePoint(x)+ribbon.transform.up*(d.interactionRadius+.001f),out _));
+            }
             ribbon.visualTime=manager.clock.duration-.1f;
             Assert.That(ribbon.Timestamp(d.width*.5f),Is.EqualTo(d.futureSeconds-.1f).Within(.001));
             // Only arithmetic and value types in the mapping hot path.

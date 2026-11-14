@@ -30,13 +30,22 @@ namespace RemixTable.Editor
                     if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save the open scene before validation; unsaved changes have been preserved.");
                 if(command=="scene")
                 {
-                    RemixSeatedLayout.ApplyZoom();
-                    File.WriteAllText("Logs/RemixZoomSceneValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
+                    ValidateScene();
                 }
                 else if(command=="edit" || command=="play") Run(command);
                 else throw new InvalidOperationException("Expected scene, edit or play.");
             }
             catch(Exception error) { File.WriteAllText("Logs/RemixZoomValidationError.txt",error.ToString());Debug.LogException(error); }
+        }
+        public static void ValidateScene()
+        {
+            RemixSceneBuilder.Validate();
+            RemixSeatedLayout.Validate();
+            RemixSeatedLayout.ValidateZoom();
+            RibbonVisualValidation.Validate();
+            var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
+            RemixSceneBuilder.Require(manager.design.interactiveAngle==180 && manager.design.arcAngle==180,"full arc editing");
+            File.WriteAllText("Logs/RemixZoomSceneValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
         }
         static void Run(string mode)
         {

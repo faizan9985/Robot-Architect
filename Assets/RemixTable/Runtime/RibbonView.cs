@@ -76,7 +76,9 @@ namespace RemixTable
                 float angle=Mathf.Atan2(p.x,p.z+d.Radius);
                 float radial=new Vector2(p.x,p.z+d.Radius).magnitude-d.Radius;
                 distance=new Vector2(p.y-HeightAt(coordinate),radial).magnitude;
-                return Mathf.Abs(angle)<=Mathf.Min(d.arcAngle,d.interactiveAngle)*Mathf.Deg2Rad*.5f &&
+                // Use the raw angle: ArcCoordinate clamps outside points to the endpoints.
+                // A tiny tolerance admits endpoints after world/local float round trips.
+                return Mathf.Abs(angle)<=Mathf.Min(d.arcAngle,d.interactiveAngle)*Mathf.Deg2Rad*.5f+0.000001f &&
                     Mathf.Abs(p.y)<=d.laneHeight*.5f && Mathf.Abs(radial)<=d.interactionDepth*.5f && distance<d.interactionRadius;
             }
             distance=new Vector2(p.y-HeightAt(p.x),p.z).magnitude;
@@ -134,7 +136,6 @@ namespace RemixTable
                 edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,0);
                 Color c=Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
-                if(d.curvedTimeline && Mathf.Abs(x/d.width*d.arcAngle)>d.interactiveAngle*.5f) c*=.45f;
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
                 colors[v]=colors[v+1]=c;
             }
