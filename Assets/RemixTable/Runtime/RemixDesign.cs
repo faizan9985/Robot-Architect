@@ -52,6 +52,10 @@ namespace RemixTable
         public float panelWidth = .74f, panelHeight = .40f;
         public float laneHeight = .078f, interactionDepth = .06f;
         public float workspaceDistance = .62f, workspaceEyeDrop = .20f;
+        [Header("Workspace recenter stabilization")]
+        [Min(.01f)] public float recenterStabilizationSeconds = .35f;
+        [Min(.001f)] public float recenterPositionTolerance = .015f;
+        [Min(.1f)] public float recenterYawTolerance = 2;
         public float transportGap = .015f, transportHeight = .10f;
         public bool constrainToLanes;
         [Header("Curved timeline")]

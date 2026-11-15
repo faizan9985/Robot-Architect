@@ -52,6 +52,9 @@ MonoBehaviour:
   interactionDepth: 0.06
   workspaceDistance: 0.62
   workspaceEyeDrop: 0.2
+  recenterStabilizationSeconds: 0.35
+  recenterPositionTolerance: 0.015
+  recenterYawTolerance: 2
   transportGap: 0.015
   transportHeight: 0.1
   constrainToLanes: 1

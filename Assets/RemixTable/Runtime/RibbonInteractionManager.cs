@@ -36,6 +36,7 @@ namespace RemixTable
         public const float LiveLead = .3f, LiveCatchUp = .5f;
         public RibbonView ActiveRibbon => active;
         bool zoomReleaseRequired;
+        bool alignmentReleaseRequired;
         float zoomStartDistance, zoomStartWindow;
         public bool ZoomReleaseRequired => zoomReleaseRequired;
         // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
@@ -63,6 +64,12 @@ namespace RemixTable
         public void ProcessHands(HandSample left, HandSample right, float deltaTime)
         {
             hands[0]=left; hands[1]=right;
+            if(manager.WorkspaceAligning) { Cancel();return; }
+            if(alignmentReleaseRequired)
+            {
+                if(left.valid && right.valid && !left.pinch && !right.pinch) alignmentReleaseRequired=false;
+                return;
+            }
             if(zoomReleaseRequired)
             {
                 // Unknown tracking is never evidence that the user released a pinch.
@@ -245,6 +252,11 @@ namespace RemixTable
             if(type==ParameterType.Gain) edit.curve=null; // Scalar region plateau with shared boundary fades.
             else if(edit.curve!=null) edit.curve.MoveKey(1,new Keyframe(AutomationStore.RegionLength(edit.start,edit.end,manager.clock.duration)*.5f,value));
             edit.value=value;manager.automation.Upsert(edit);
+        }
+        public void CancelForWorkspaceAlignment()
+        {
+            if(active!=null || State==GestureState.ZoomPending || State==GestureState.Zooming) alignmentReleaseRequired=true;
+            Cancel();
         }
         public void Cancel() { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) active.SetSelected(false);active=null;State=GestureState.Idle;gainEdit=effectEdit=null;hands[0]=hands[1]=default; }
         void OnDisable() => Cancel();
