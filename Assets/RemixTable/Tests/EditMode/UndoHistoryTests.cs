@@ -107,6 +107,8 @@ namespace RemixTable.Tests
             var controls=ui.AddComponent<RemixHistoryControls>();controls.manager=manager;
             Button MakeButton(string name){var go=new GameObject(name);go.transform.SetParent(ui.transform);var img=go.AddComponent<Image>();var b=go.AddComponent<Button>();b.targetGraphic=img;return b;}
             controls.undoButton=MakeButton("undo");controls.redoButton=MakeButton("redo");
+            controls.undoIcon=new GameObject("undo icon").AddComponent<Image>();controls.undoIcon.transform.SetParent(controls.undoButton.transform);
+            controls.redoIcon=new GameObject("redo icon").AddComponent<Image>();controls.redoIcon.transform.SetParent(controls.redoButton.transform);
             ui.SetActive(true);
             controls.Undo(); // Nothing to undo: a harmless press that refreshes the buttons (EditMode skips OnEnable).
             Assert.IsEmpty(manager.automation.edits);
@@ -115,6 +117,8 @@ namespace RemixTable.Tests
             controls.Undo();
             Assert.IsEmpty(manager.automation.edits);
             Assert.IsFalse(controls.undoButton.interactable);Assert.IsTrue(controls.redoButton.interactable);
+            Assert.AreEqual(controls.dimmedIconAlpha,controls.undoIcon.color.a,.001f,"unavailable icon is dimmed");
+            Assert.AreEqual(1f,controls.redoIcon.color.a,.001f,"available icon is full brightness");
             controls.Redo();
             Assert.IsNotEmpty(manager.automation.edits);
             Assert.IsTrue(controls.undoButton.interactable);Assert.IsFalse(controls.redoButton.interactable);

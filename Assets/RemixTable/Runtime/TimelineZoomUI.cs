@@ -31,9 +31,11 @@ namespace RemixTable
             int state=manager.IsEditing && Mathf.Abs(zoom.TargetSeconds-zoom.VisibleSeconds)>.01f ? 3 : zoom.AtMinimum?1:zoom.AtMaximum?2:0;
             if(halfSeconds==displayedHalfSeconds && state==displayedState) return;
             float seconds=halfSeconds*.5f;
-            string format=state==3?"{0:1}s visible / queued":state==1?"{0:1}s visible / MIN":state==2?"{0:1}s visible / MAX":"{0:1}s visible";
-            workspaceRange.SetText(format,seconds);
-            menuRange.SetText(state==3?"TIMELINE ZOOM  +\n{0:1}s visible / queued":state==1?"TIMELINE ZOOM  +\n{0:1}s visible / MIN":state==2?"TIMELINE ZOOM  +\n{0:1}s visible / MAX":"TIMELINE ZOOM  +\n{0:1}s visible",seconds);
+            // Plain .text: TMP's SetText(format, value) needs the TMP Settings asset, which is git-ignored
+            // (Assets/TextMesh Pro) and so missing on fresh clones, where it throws on every refresh.
+            string range=seconds.ToString("0.0",System.Globalization.CultureInfo.InvariantCulture)+"s visible"+(state==3?" / queued":state==1?" / MIN":state==2?" / MAX":"");
+            workspaceRange.text=range;
+            menuRange.text="TIMELINE ZOOM  +\n"+range;
             displayedHalfSeconds=halfSeconds;displayedState=state;
         }
     }
