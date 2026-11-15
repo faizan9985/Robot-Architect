@@ -11,6 +11,7 @@ namespace RemixTable
         public Transform workspace;
         public PlaybackClock clock = new PlaybackClock();
         public AutomationStore automation = new AutomationStore();
+        public readonly RemixEditHistory history = new RemixEditHistory();
         public bool anchored;
         public TimelineZoom zoom = new TimelineZoom();
         public Canvas palmMenuCanvas;
@@ -28,7 +29,7 @@ namespace RemixTable
         void OnDisable() { library.SongChanged -= ChangeSong; }
         void ChangeSong(SongMetadata song)
         {
-            interactions.Cancel(); clock.Reset(song.duration);
+            interactions.Cancel(); history.Clear(); clock.Reset(song.duration);
             foreach (var r in ribbons) r.ResetPhase();
             if (audioManager != null) audioManager.Load(song);
         }

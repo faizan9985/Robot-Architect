@@ -10,11 +10,13 @@ namespace RemixTable.Editor
     // so it can run on the existing scene without re-applying the whole seated layout.
     public static class RemixModeLayout
     {
-        public const string CanvasName = "ModeCanvas", PlaybackCanvasName = "PlaybackModeCanvas";
+        public const string CanvasName = "ModeCanvas", PlaybackCanvasName = "PlaybackModeCanvas", HistoryCanvasName = "HistoryCanvas";
         public const float Height = .07f, Gap = .008f;
         public static float CanvasY(RemixDesign d) => d.TransportY - d.transportHeight * .5f - Gap - Height * .5f;
         // EDIT / LIVE row sits directly under the VOLUME / FILTER row.
         public static float PlaybackCanvasY(RemixDesign d) => CanvasY(d) - Height - Gap;
+        // UNDO / REDO row sits directly under the EDIT / LIVE row.
+        public static float HistoryCanvasY(RemixDesign d) => PlaybackCanvasY(d) - Height - Gap;
         [MenuItem("Tools/Remix Table/Add Volume-Filter Mode Buttons")]
         public static void Apply()
         {
@@ -29,6 +31,8 @@ namespace RemixTable.Editor
         // Same menu step; both rows are idempotent, so either item (re)builds both.
         [MenuItem("Tools/Remix Table/Add Live-Edit Playback Buttons")]
         public static void ApplyPlayback() => Apply();
+        [MenuItem("Tools/Remix Table/Add Undo-Redo Buttons")]
+        public static void ApplyHistory() => Apply();
         static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y)
         {
             var d = manager.design;
@@ -58,6 +62,7 @@ namespace RemixTable.Editor
             transport.palmInstructions.text = RemixTransport.Guidance;
             EditorUtility.SetDirty(selector); EditorUtility.SetDirty(transport.palmInstructions);
             BuildPlayback(manager, transport);
+            BuildHistory(manager, transport);
             return selector;
         }
         public static RemixPlaybackModeSelector BuildPlayback(RemixTableManager manager, RemixTransport transport)
@@ -76,6 +81,24 @@ namespace RemixTable.Editor
             EditorUtility.SetDirty(selector);
             return selector;
         }
+        public static RemixHistoryControls BuildHistory(RemixTableManager manager, RemixTransport transport)
+        {
+            var font = transport.songTitle.font;
+            var rect = Row(manager, transport, HistoryCanvasName, HistoryCanvasY(manager.design));
+            var controls = rect.GetComponent<RemixHistoryControls>(); if (controls == null) controls = rect.gameObject.AddComponent<RemixHistoryControls>();
+            controls.manager = manager;
+            RemixSeatedLayout.Text(rect, "HistoryHeading", "HISTORY", new Vector2(-235, 0), new Vector2(170, 40), 15, font);
+            controls.undoButton = RemixSeatedLayout.Button(rect, "Undo", "UNDO", -40, 180, font, controls.Undo);
+            controls.redoButton = RemixSeatedLayout.Button(rect, "Redo", "REDO", 160, 180, font, controls.Redo);
+            foreach (var b in new[] { controls.undoButton, controls.redoButton })
+            {
+                ((RectTransform)b.transform).anchoredPosition = new Vector2(((RectTransform)b.transform).anchoredPosition.x, 0);
+                var colors = b.colors; colors.disabledColor = new Color(.35f, .35f, .35f, .5f); b.colors = colors;
+                b.interactable = false; // Nothing to undo until the first edit.
+            }
+            EditorUtility.SetDirty(controls);
+            return controls;
+        }
         public static void Validate()
         {
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
@@ -92,6 +115,11 @@ namespace RemixTable.Editor
             RemixSceneBuilder.Require(playback.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace && playback.GetComponent<TrackedDeviceGraphicRaycaster>() != null, "playback canvas is pokeable world UI");
             foreach (var (button, method) in new[] { (playback.editButton, nameof(RemixPlaybackModeSelector.SelectEdit)), (playback.liveButton, nameof(RemixPlaybackModeSelector.SelectLive)) })
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == playback && button.onClick.GetPersistentMethodName(0) == method, "playback binding " + button.name);
+            var history = RemixSceneBuilder.All<RemixHistoryControls>(scene).Single();
+            RemixSceneBuilder.Require(history.manager == manager, "history controls wired to manager");
+            RemixSceneBuilder.Require(history.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace && history.GetComponent<TrackedDeviceGraphicRaycaster>() != null, "history canvas is pokeable world UI");
+            foreach (var (button, method) in new[] { (history.undoButton, nameof(RemixHistoryControls.Undo)), (history.redoButton, nameof(RemixHistoryControls.Redo)) })
+                RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == history && button.onClick.GetPersistentMethodName(0) == method, "history binding " + button.name);
             Debug.Log("REMIX_MODE_VALIDATION_PASS");
         }
     }

@@ -208,6 +208,7 @@ namespace RemixTable
         }
         void Begin(RibbonView ribbon,int h)
         {
+            manager.history.BeginGesture(manager.automation); // One undo step per hold.
             active=ribbon;owner=h;active.SetSelected(true);active.wholeStem=false;
             float t=active.Timestamp(active.LocalX(hands[h].position));
             active.regionStart=Mathf.Repeat(t-.3f,manager.clock.duration);active.regionEnd=Mathf.Repeat(t+.3f,manager.clock.duration);
@@ -246,7 +247,7 @@ namespace RemixTable
             else if(edit.curve!=null) edit.curve.MoveKey(1,new Keyframe(AutomationStore.RegionLength(edit.start,edit.end,manager.clock.duration)*.5f,value));
             edit.value=value;manager.automation.Upsert(edit);
         }
-        public void Cancel() { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) active.SetSelected(false);active=null;State=GestureState.Idle;gainEdit=effectEdit=null;hands[0]=hands[1]=default; }
+        public void Cancel() { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) { active.SetSelected(false); if(manager!=null) manager.history.EndGesture(manager.automation); }active=null;State=GestureState.Idle;gainEdit=effectEdit=null;hands[0]=hands[1]=default; }
         void OnDisable() => Cancel();
         void OnApplicationPause(bool paused) { if(paused) Cancel(); }
         void OnApplicationFocus(bool focused) { if(!focused) Cancel(); }
