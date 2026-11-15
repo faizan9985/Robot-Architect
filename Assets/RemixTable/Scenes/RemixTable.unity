@@ -13700,6 +13700,7 @@ MonoBehaviour:
   - {fileID: 670041199}
   - {fileID: 2096561243}
   workspace: {fileID: 1187649322}
+  workspaceCamera: {fileID: 22784142}
   clock:
     elapsed: 0
     duration: 32

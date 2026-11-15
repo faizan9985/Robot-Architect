@@ -28,7 +28,8 @@ namespace RemixTable.Editor
             {
                 for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)
                     if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save the open scene before validation; unsaved changes have been preserved.");
-                if(command=="scene")
+                if(command=="alignment") ConfigureWorkspaceAlignment();
+                else if(command=="scene")
                 {
                     ValidateScene();
                 }
@@ -45,6 +46,14 @@ namespace RemixTable.Editor
             RibbonVisualValidation.Validate();
             RemixModeLayout.Validate();
             var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
+            var origin=UnityEngine.Object.FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>();
+            RemixSceneBuilder.Require(manager.workspaceCamera==origin.Camera,"workspace uses tracked rig camera");
+            RemixSceneBuilder.Require(!manager.workspace.IsChildOf(origin.transform),"workspace is world anchored outside rig");
+            foreach(var ribbon in manager.ribbons) RemixSceneBuilder.Require(ribbon.transform.IsChildOf(manager.workspace),"ribbon follows workspace root");
+            foreach(var control in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include,FindObjectsSortMode.None))
+                if(control is RemixTransport || control is RemixModeSelector || control is RemixPlaybackModeSelector)
+                    RemixSceneBuilder.Require(control.transform.IsChildOf(manager.workspace),"transport and mode controls follow workspace root");
+            RemixSceneBuilder.Require(!manager.palmMenuCanvas.transform.IsChildOf(manager.workspace),"palm menu remains hand relative");
             RemixSceneBuilder.Require(manager.design.interactiveAngle==180 && manager.design.arcAngle==180,"full arc editing");
             RemixSceneBuilder.Require(UnityEngine.Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include,FindObjectsSortMode.None).Length==1,"one AudioListener");
             File.WriteAllText("Logs/RemixZoomSceneValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
@@ -55,6 +64,17 @@ namespace RemixTable.Editor
             var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             EditorSceneManager.MarkSceneDirty(scene);
             if(!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Merged scene could not be saved");
+            ValidateScene();
+        }
+        public static void ConfigureWorkspaceAlignment()
+        {
+            EditorSceneManager.OpenScene(RemixSceneBuilder.ScenePath);
+            var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
+            manager.workspaceCamera=UnityEngine.Object.FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>().Camera;
+            EditorUtility.SetDirty(manager);
+            var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            if(!EditorSceneManager.SaveScene(scene)) throw new InvalidOperationException("Could not save workspace camera reference");
             ValidateScene();
         }
         static void Run(string mode)
