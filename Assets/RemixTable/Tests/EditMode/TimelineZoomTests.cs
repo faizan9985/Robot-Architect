@@ -43,7 +43,7 @@ namespace RemixTable.Tests
             long allocated=System.GC.GetAllocatedBytesForCurrentThread()-before;
             Assert.Greater(sum,0);Assert.AreEqual(0,allocated);
         }
-        [Test] public void SavedPalmBindingsAndSharedRibbonsPreservePhysicalArcAndAutomation()
+        [Test] public void SavedToolbarBindingsAndSharedRibbonsPreservePhysicalArcAndAutomation()
         {
             EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var ui=Object.FindFirstObjectByType<TimelineZoomUI>();
@@ -69,8 +69,9 @@ namespace RemixTable.Tests
             Assert.AreEqual(position,manager.workspace.position);Assert.AreEqual(rotation,manager.workspace.rotation);Assert.AreEqual(point,manager.design.ArcPoint(.1f));
             Assert.AreEqual(22,edit.start);Assert.AreEqual(24,edit.end);Assert.AreEqual(.4f,edit.value);
             ui.expand.onClick.SetPersistentListenerState(0,UnityEventCallState.EditorAndRuntime);
-            Assert.IsFalse(ui.options.activeSelf);ui.expand.onClick.Invoke();Assert.IsTrue(ui.options.activeSelf);Assert.IsFalse(ui.instructions.activeSelf);
-            ui.expand.onClick.Invoke();Assert.IsFalse(ui.options.activeSelf);Assert.IsTrue(ui.instructions.activeSelf);
+            var guidance=manager.workspace.GetComponentInChildren<RemixTransport>().palmInstructions.gameObject;
+            Assert.IsFalse(ui.options.activeSelf);ui.expand.onClick.Invoke();ui.toolbar.AdvanceAnimation(1);Assert.IsTrue(ui.options.activeSelf);Assert.IsTrue(guidance.activeSelf);
+            ui.expand.onClick.Invoke();ui.toolbar.AdvanceAnimation(1);Assert.IsFalse(ui.options.activeSelf);Assert.IsTrue(guidance.activeSelf);
             manager.ribbons[0].selected=true;float frozen=manager.zoom.VisibleSeconds;
             ui.detail.onClick.Invoke();manager.zoom.Tick(10,manager.IsEditing,.16f);Assert.AreEqual(frozen,manager.zoom.VisibleSeconds);
             manager.ribbons[0].selected=false;manager.zoom.Tick(10,manager.IsEditing,.16f);Assert.AreEqual(4,manager.zoom.VisibleSeconds);

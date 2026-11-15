@@ -96,9 +96,11 @@ namespace RemixTable.Editor
             var controls = rect.GetComponent<RemixHistoryControls>(); if (controls == null) controls = rect.gameObject.AddComponent<RemixHistoryControls>();
             controls.manager = manager;
             float x = (IconButtonWidth + IconPad) * 500;
-            controls.undoButton = IconButton(rect, "Undo", undoIcon, -x, controls.Undo, out controls.undoIcon);
-            controls.redoButton = IconButton(rect, "Redo", redoIcon, x, controls.Redo, out controls.redoIcon);
+            var buttonParent=rect.Find("NavigationContent") as RectTransform ?? rect;
+            controls.undoButton = IconButton(buttonParent, "Undo", undoIcon, -x, controls.Undo, out controls.undoIcon);
+            controls.redoButton = IconButton(buttonParent, "Redo", redoIcon, x, controls.Redo, out controls.redoIcon);
             controls.Paint(); // Both start dimmed: nothing to undo until the first edit.
+            RemixSpeedLayout.Build(manager,controls,transport.songTitle.font);
             EditorUtility.SetDirty(controls);
             return controls;
         }
@@ -182,6 +184,7 @@ namespace RemixTable.Editor
             RemixSceneBuilder.Require(history.undoIcon != null && history.undoIcon.sprite != null && history.redoIcon != null && history.redoIcon.sprite != null, "history buttons show icons");
             RemixSceneBuilder.Require(history.transform.localPosition.y - HistorySize.y * .5f > manager.design.panelHeight * .5f, "history row sits above the ribbon panel");
             Debug.Log("REMIX_MODE_VALIDATION_PASS");
+            RemixSpeedLayout.Validate();
         }
     }
 }

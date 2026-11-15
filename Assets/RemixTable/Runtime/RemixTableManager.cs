@@ -15,6 +15,8 @@ namespace RemixTable
         public bool anchored;
         public TimelineZoom zoom = new TimelineZoom();
         public Canvas palmMenuCanvas;
+        public RemixSpeedSelector speedSelector;
+        public RemixNavigationToolbar navigationToolbar;
         public bool IsEditing
         {
             get
@@ -63,4 +65,3 @@ namespace RemixTable
         }
     }
 }
-

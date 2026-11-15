@@ -72,6 +72,7 @@ namespace RemixTable
             if(State==GestureState.ZoomPending || State==GestureState.Zooming)
             {
                 if(!left.valid || !right.valid || !left.pinch || !right.pinch || manager.IsEditing ||
+                    (manager.navigationToolbar!=null && manager.navigationToolbar.MenusVisible) ||
                     (manager.palmMenuCanvas!=null && manager.palmMenuCanvas.gameObject.activeInHierarchy)) { Cancel(); return; }
                 float distance=Vector3.Distance(left.position,right.position);
                 if(State==GestureState.ZoomPending && Mathf.Abs(distance-zoomStartDistance)<manager.design.zoomMovementThreshold) return;
@@ -94,6 +95,7 @@ namespace RemixTable
                 if (active == null)
                 {
                     if(manager.design.curvedTimeline && !manager.IsEditing && left.valid && right.valid && left.pinch && right.pinch &&
+                        (manager.navigationToolbar==null || !manager.navigationToolbar.MenusVisible) &&
                         (manager.palmMenuCanvas==null || !manager.palmMenuCanvas.gameObject.activeInHierarchy) && InZoomWorkspace(left.position) && InZoomWorkspace(right.position))
                     {
                         zoomStartDistance=Vector3.Distance(left.position,right.position);

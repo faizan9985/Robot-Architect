@@ -28,7 +28,8 @@ namespace RemixTable.Editor
             {
                 for(int i=0;i<UnityEngine.SceneManagement.SceneManager.sceneCount;i++)
                     if(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save the open scene before validation; unsaved changes have been preserved.");
-                if(command=="scene")
+                if(command=="speed") RemixSpeedLayout.Apply();
+                else if(command=="scene")
                 {
                     ValidateScene();
                 }
