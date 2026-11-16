@@ -45,8 +45,21 @@ namespace RemixTable
             else
             {
                 manager.EndExternalHold(orbs[stem]);
-                manager.mix.SetPosition((StemId)stem, manager.SpatialLocal(orbs[stem].transform.position));
+                var position = orbs[stem].transform.position;
+                // ROOM mode: let go near a real wall or table and the stem mounts on it like a speaker.
+                if (manager.room != null && manager.room.TryClosestSurface(position, surfaceSnapDistance, out var surface, out var point))
+                    position = point + surface.normal * orbDiameter * .65f;
+                manager.mix.SetPosition((StemId)stem, manager.SpatialLocal(position));
             }
+        }
+        [Tooltip("ROOM mode: an orb released this close (meters) to a wall or table sticks to it.")]
+        [Min(0)] public float surfaceSnapDistance = .3f;
+        // True while the orb sits on a real surface (drawn with a mount ring by the room visuals).
+        public bool Mounted(int stem, out RoomSurface surface, out Vector3 point)
+        {
+            surface = default; point = default;
+            if (manager.room == null || stem < 0 || stem >= orbs.Length || orbs[stem] == null || !orbs[stem].gameObject.activeInHierarchy) return false;
+            return manager.room.TryClosestSurface(orbs[stem].transform.position, orbDiameter * 1.2f, out surface, out point);
         }
         void LateUpdate()
         {
@@ -60,6 +73,7 @@ namespace RemixTable
                     if (!spatial && held[i]) Grab(i, false);
                     orbs[i].gameObject.SetActive(spatial);
                 }
+                snapNextFrame = true;
             }
             if (!spatial || !manager.anchored) return;
             block ??= new MaterialPropertyBlock();
@@ -69,7 +83,12 @@ namespace RemixTable
                 var stem = (StemId)i; var t = orbs[i].transform;
                 // Held orbs drive the mix; free orbs follow it (a loaded save or a re-anchored table).
                 if (held[i]) manager.mix.SetPosition(stem, manager.SpatialLocal(t.position));
-                else t.position = manager.SpatialWorld(manager.mix.positions[i]);
+                else
+                {
+                    // Glide to new spots (room speaker placement, a snapped release, the table moving) rather than teleport.
+                    var target = manager.SpatialWorld(manager.mix.positions[i]);
+                    t.position = snapNextFrame ? target : Vector3.Lerp(t.position, target, 1 - Mathf.Exp(-glide * Time.unscaledDeltaTime));
+                }
                 float level = manager.audioManager != null ? manager.audioManager.Level(stem) : 0;
                 bool audible = manager.mix.Audible(stem);
                 t.localScale = Vector3.one * orbDiameter * (1 + (audible ? level * pulse : 0)) * (held[i] ? 1.15f : 1);
@@ -81,6 +100,10 @@ namespace RemixTable
                     orbRenderers[i].SetPropertyBlock(block);
                 }
             }
+            snapNextFrame = false;
         }
+        [Tooltip("How quickly free orbs glide to a new spot (1/s).")]
+        [Min(.1f)] public float glide = 9;
+        bool snapNextFrame = true;
     }
 }

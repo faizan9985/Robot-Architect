@@ -65,8 +65,17 @@ namespace RemixTable
         // ribbon arc) in the workspace's orientation, so it follows the table when it is re-anchored.
         public Vector3 HeadAnchorLocal => design == null ? Vector3.zero :
             new Vector3(0, design.workspaceEyeDrop, -(design.curvedTimeline ? design.Radius : design.workspaceDistance));
-        public Vector3 SpatialWorld(Vector3 local) => workspace == null ? local : workspace.position + workspace.rotation * (HeadAnchorLocal + local);
-        public Vector3 SpatialLocal(Vector3 world) => workspace == null ? world : Quaternion.Inverse(workspace.rotation) * (world - workspace.position) - HeadAnchorLocal;
+        // The anchor scales with the workspace (ROOM mode shrinks the table to fit small rooms); stem offsets
+        // stay in real meters so a stem on a wall stays on that wall.
+        public Vector3 HeadAnchorWorld => workspace == null ? Vector3.zero : workspace.TransformPoint(HeadAnchorLocal);
+        public Vector3 SpatialWorld(Vector3 local) => workspace == null ? local : HeadAnchorWorld + workspace.rotation * local;
+        public Vector3 SpatialLocal(Vector3 world) => workspace == null ? world : Quaternion.Inverse(workspace.rotation) * (world - HeadAnchorWorld);
+        // ROOM mode: the user's real room (walls, desk, furniture) while passthrough is on and a scan is
+        // loaded; null otherwise. Set by RemixRoomScanner.
+        public RoomModel room;
+        // Pose the table was originally anchored at in front of the user (where ROOM mode returns it).
+        public Pose SeatedPose { get; private set; }
+        public event System.Action Anchored;
         // Stem pitch in semitones at the playhead (PITCH automation).
         public float PitchAt(StemId stem, float time) =>
             Mathf.Clamp(automation.Evaluate(library.Current.id, stem, ParameterType.Pitch, time, clock.duration), -PitchShiftDsp.MaxSemitones, PitchShiftDsp.MaxSemitones);
@@ -94,7 +103,9 @@ namespace RemixTable
                 var cam = Camera.main.transform;
                 var pose=design.SeatedPose(cam.position,cam.forward);
                 workspace.SetPositionAndRotation(pose.position,pose.rotation);
+                SeatedPose = pose;
                 anchored = true;
+                Anchored?.Invoke();
             }
             // The audio manager owns the DSP timeline.
         }

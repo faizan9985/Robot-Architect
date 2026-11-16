@@ -342,6 +342,12 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2218496723442559054, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 22784146}
+    - targetCorrespondingSourceObject: {fileID: 2218496723442559054, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 22784145}
     - targetCorrespondingSourceObject: {fileID: 657184242118504722, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1771457302}
@@ -359,6 +365,44 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 657184242161839408, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
   m_PrefabInstance: {fileID: 22784141}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &22784144 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2218496723442559054, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+  m_PrefabInstance: {fileID: 22784141}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &22784145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 22784144}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36c26a894c4b4a7fa891eaf696025cd7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARBoundingBoxManager
+  <trackablesChanged>k__BackingField:
+    m_PersistentCalls:
+      m_Calls: []
+  m_BoundingBoxPrefab: {fileID: 0}
+--- !u!114 &22784146
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 22784144}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1760703bbd54c04488a8d10600262ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARPlaneManager
+  <trackablesChanged>k__BackingField:
+    m_PersistentCalls:
+      m_Calls: []
+  m_PlanePrefab: {fileID: 0}
+  m_DetectionMode: 3
 --- !u!1 &44478657
 GameObject:
   m_ObjectHideFlags: 0
@@ -1242,6 +1286,97 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 143092716}
   m_CullTransparentMesh: 1
+--- !u!1 &150229196
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 150229200}
+  - component: {fileID: 150229199}
+  - component: {fileID: 150229198}
+  - component: {fileID: 150229197}
+  m_Layer: 0
+  m_Name: RemixRoom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &150229197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150229196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e7c2775f59cc6546a22af9e708d1842, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RemixRoomScanner
+  passthrough: {fileID: 1650474222}
+  session: {fileID: 1491962163}
+  planeManager: {fileID: 22784146}
+  boxManager: {fileID: 22784145}
+  placer: {fileID: 150229198}
+  toolbox: {fileID: 953133766}
+  settleSeconds: 0.6
+  scanTimeout: 4
+--- !u!114 &150229198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150229196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ecd4131da6a93e4389016b941febda3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RemixTable.Runtime::RemixTable.RemixRoomPlacer
+  manager: {fileID: 1747873704}
+  visuals: {fileID: 150229199}
+  toolbox: {fileID: 953133766}
+  moveSeconds: 1.1
+--- !u!114 &150229199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150229196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80dc8ae9015ddac4fbe4afc61361ac8e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RemixTable.Runtime::RemixTable.RemixRoomVisuals
+  manager: {fileID: 1747873704}
+  spatialField: {fileID: 2005695607}
+  glowMaterial: {fileID: 2100000, guid: cf71f57aea9942448bd3404c6622c7fa, type: 2}
+  wallColor: {r: 0.32, g: 0.78, b: 1, a: 1}
+  deskColor: {r: 1, g: 0.78, b: 0.45, a: 1}
+  revealSpeed: 3.2
+  rippleSpeed: 2.6
+  revealHold: 3
+  wallStemTint: 0.85
+--- !u!4 &150229200
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150229196}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &186947013
 GameObject:
   m_ObjectHideFlags: 0
@@ -22073,6 +22208,9 @@ MonoBehaviour:
     visibleSeconds: 8
     targetSeconds: 8
   palmMenuCanvas: {fileID: 951474560}
+  room:
+    surfaces: []
+    boxes: []
 --- !u!114 &1747873705
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23972,6 +24110,8 @@ MonoBehaviour:
   - {fileID: 693226954}
   orbDiameter: 0.09
   pulse: 0.45
+  surfaceSnapDistance: 0.3
+  glide: 9
 --- !u!4 &2005695608
 Transform:
   m_ObjectHideFlags: 0
@@ -24873,3 +25013,4 @@ SceneRoots:
   - {fileID: 1449208839}
   - {fileID: 2005695608}
   - {fileID: 868661055}
+  - {fileID: 150229200}
