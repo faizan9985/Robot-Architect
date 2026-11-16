@@ -28,6 +28,9 @@ public sealed class RemixRoomScanner : MonoBehaviour
     [SerializeField] private ARSession session;
     [SerializeField] private ARPlaneManager planeManager;
     [SerializeField] private ARBoundingBoxManager boxManager;
+    [Tooltip("Environment-depth occlusion (real hands and furniture hide the ribbons); only runs in ROOM mode.")]
+    [SerializeField] private AROcclusionManager occlusionManager;
+    [SerializeField] private ARShaderOcclusion shaderOcclusion;
     [SerializeField] private RemixRoomPlacer placer;
     [SerializeField] private RemixToolbox toolbox;
     [Tooltip("Seconds without new surfaces before the room counts as loaded.")]
@@ -102,6 +105,16 @@ public sealed class RemixRoomScanner : MonoBehaviour
     {
         if (planeManager != null) planeManager.enabled = on;
         if (boxManager != null) boxManager.enabled = on;
+        if (occlusionManager != null) occlusionManager.enabled = on;
+        if (shaderOcclusion != null) shaderOcclusion.enabled = on;
+    }
+
+    static readonly int TrackingFromWorld = Shader.PropertyToID("_RemixTrackingFromWorld");
+    // Depth reprojection matrices are in XR tracking space; shaders need world -> tracking.
+    static void UpdateTrackingMatrix()
+    {
+        var tracking = Camera.main != null ? Camera.main.transform.parent : null;
+        Shader.SetGlobalMatrix(TrackingFromWorld, tracking != null ? tracking.worldToLocalMatrix : Matrix4x4.identity);
     }
 
     // Space Setup runs as a separate system app; when we get focus back, ask again for the fresh scan.
@@ -114,6 +127,7 @@ public sealed class RemixRoomScanner : MonoBehaviour
 
     private void Update()
     {
+        UpdateTrackingMatrix();
         if (Current == State.Off) return;
         if (Current == State.WaitingForPermission)
         {

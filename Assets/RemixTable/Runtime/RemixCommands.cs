@@ -7,7 +7,8 @@ namespace RemixTable
         Undo, Redo, Play, Pause, NextSong, PreviousSong,
         VolumeMode, FilterMode, PitchMode, EditMode, LiveMode,
         SnapOn, SnapOff, LoopOn, LoopOff, SpatialOn, SpatialOff, RecordStart, RecordStop, PassthroughOn, PassthroughOff,
-        VibeChill, VibeHype, VibeKaraoke, VibeBreakdown, VibeAcapella, VibeNormal
+        VibeChill, VibeHype, VibeKaraoke, VibeBreakdown, VibeAcapella, VibeNormal,
+        Tutorial
     }
     public struct RemixCommand
     {
@@ -52,6 +53,7 @@ namespace RemixTable
             if (Has(text, "reset|clear|start over|wipe") && Has(text, "all|everything|song|remix|over")) return new RemixCommand(RemixCommandKind.ResetAll);
             if (Has(text, "reset|clear|wipe") && stem) return new RemixCommand(RemixCommandKind.ClearStem, id);
 
+            if (Has(text, "tutorial|help|how does this work|how do i|show me how|quick start")) return new RemixCommand(RemixCommandKind.Tutorial);
             // Vibes: one phrase reshapes the whole mix ("make it chill", "karaoke", "back to normal").
             if (Has(text, "back to normal|bring it back|normal|original mix|original|no vibe|clear the vibe|clear vibe")) return new RemixCommand(RemixCommandKind.VibeNormal);
             if (Has(text, "karaoke|sing along|singalong|instrumental|no vocals")) return new RemixCommand(RemixCommandKind.VibeKaraoke);

@@ -123,6 +123,7 @@ namespace RemixTable.Tests
             try
             {
                 cameraObject.transform.SetPositionAndRotation(manager.SpatialWorld(Vector3.zero), root.transform.rotation);
+                audio.use3DAudio = false; // 2D fallback: stereo pan from the orb direction
                 audio.Load(song);
                 manager.mix.SetPosition(StemId.Drums, new Vector3(-1, 0, 0));
                 manager.mix.SetPosition(StemId.Bass, new Vector3(1, 0, 0));
@@ -133,6 +134,20 @@ namespace RemixTable.Tests
                 manager.mix.SetSpatial(false);
                 yield return new WaitForSeconds(.4f);
                 Assert.AreEqual(0, audio.sources[(int)StemId.Drums].panStereo, .01f);
+
+                // Real 3D: each source sits on its orb, fully spatialized; leaving SPATIAL returns to 2D.
+                audio.use3DAudio = true;
+                manager.mix.SetSpatial(true);
+                yield return null; yield return null;
+                Assert.IsTrue(audio.Spatial3DActive);
+                var drums = audio.sources[(int)StemId.Drums];
+                Assert.AreEqual(1, drums.spatialBlend, 1e-4f);
+                Assert.Less(Vector3.Distance(drums.transform.position, manager.SpatialWorld(new Vector3(-1, 0, 0))), 1e-3f);
+                Assert.Less(cameraObject.transform.InverseTransformPoint(drums.transform.position).x, 0, "drums to the left of the head");
+                manager.mix.SetSpatial(false);
+                yield return null; yield return null;
+                Assert.IsFalse(audio.Spatial3DActive);
+                Assert.AreEqual(0, drums.spatialBlend, 1e-4f);
             }
             finally { Object.Destroy(cameraObject); }
         }

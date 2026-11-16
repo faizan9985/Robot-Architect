@@ -13,9 +13,12 @@ Shader "RemixTable/RibbonEnergy"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
+            // ROOM mode: real hands and furniture hide the ribbons (environment depth occlusion).
+            #pragma multi_compile _ XR_HARD_OCCLUSION XR_SOFT_OCCLUSION
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "RemixOcclusion.hlsl"
             struct Attributes { float4 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; float4 edge:TEXCOORD1; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; float3 edge:TEXCOORD1; UNITY_VERTEX_OUTPUT_STEREO };
+            struct Varyings { float4 positionCS:SV_POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; float3 edge:TEXCOORD1; float3 positionWS:TEXCOORD2; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
             CBUFFER_END
@@ -24,7 +27,8 @@ Shader "RemixTable/RibbonEnergy"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-                output.positionCS=TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS=TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS=TransformWorldToHClip(output.positionWS);
                 output.color=input.color*_BaseColor;
                 output.uv=input.uv;
                 output.edge=input.edge.xyz;
@@ -32,6 +36,7 @@ Shader "RemixTable/RibbonEnergy"
             }
             half4 frag(Varyings input):SV_Target
             {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float y=input.uv.y;
                 float lower=input.edge.x,upper=input.edge.y;
                 float aa=max(fwidth(y),.001);
@@ -40,6 +45,7 @@ Shader "RemixTable/RibbonEnergy"
                 float halo=smoothstep(0,max(lower,.001),y)*(1-smoothstep(min(upper,.999),1,y));
                 float alpha=saturate(core*.55+rim*.4+halo*input.edge.z*.2);
                 half3 radiance=input.color.rgb*(.35+rim*.8+halo*input.edge.z*.2);
+                alpha*=RemixOcclusion(input.positionWS,REMIX_EYE_INDEX);
                 return half4(radiance*alpha,alpha);
             }
             ENDHLSL

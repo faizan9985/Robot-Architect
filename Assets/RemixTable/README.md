@@ -104,6 +104,23 @@ NEXT and PREVIOUS skip the silent placeholder songs (`SongLibraryManager.skipSil
 
 **Setup:** **Tools > Remix Table > Add Daily Drop, Vibes and Access Panels**, or `-executeMethod RemixTable.Editor.RemixSidePanelsLayout.Apply`. It also re-detects each song's tempo and first beat.
 
+## Quick Start, 3D audio, gaze, FoV and occlusion
+
+- **QUICK START** (`RemixOnboarding`): one line at a time on a card above the tools, plus a ghost pinch (thumb and index tips) that shows the gesture on the vocals ribbon. Each step completes when you do it:
+  1. Pull the vocals down (instant karaoke).
+  2. Bring them back, or press UNDO.
+  3. Tap a vibe (the VIBES panel pulses).
+  4. Press ROOM (the button pulses). This step only appears on a headset with passthrough.
+
+  It runs once, and SKIP ends it. Saying "tutorial" or "help" replays it.
+- **Real 3D audio** (`RemixAudioManager.use3DAudio` and `Assets/Scripts/Audio/RemixMetaAudio`): with SPATIAL on, each stem's AudioSource sits on its orb and Meta XR Audio renders it, using HRTF, early reflections and reverb. The project's spatializer plugin is Meta XR Audio. The shoebox reverb is sized from the real Space Setup scan in ROOM mode; otherwise a calm default room is used. With SPATIAL off the stems stay plain stereo.
+- **Gaze** (`RemixGazeFocus`): the ribbon you look at brightens and is named. Look at a ribbon and hold a pinch in the air (away from the ribbons, one hand, at least 0.35 s) to hear that stem alone. Releasing restores the mix, and nothing in the remix changes. Quick pinches (UI taps), two-hand zoom, ribbon edits and orb grabs never trigger it.
+- **FoV-aware layout** (`RemixFovAdapter`): it measures the headset's binocular horizontal FoV from the eye projections. If the side panels would pass the comfortable cone (FoV/2 − 8°), as on Quest 3S, they slide inward and shrink to no less than 72%, never over the centre rows. The ribbons and core rows are central on every device.
+- **Pause / resume**: the song pauses when the app is suspended and when the Quest system menu takes focus, and resumes where it was.
+- **Occlusion in ROOM mode**: `AROcclusionManager` and `ARShaderOcclusion` on the camera, with the *Meta Quest: Occlusion* OpenXR feature, run only while ROOM is on. `RibbonEnergy.shader` reads the environment depth (`RemixOcclusion.hlsl`, soft 4 cm edge), so your real hands and furniture hide the ribbons. The room-glow surfaces are not occluded, because they lie on the real surfaces.
+
+**Setup:** **Tools > Remix Table > Add Quick Start, 3D Audio, Gaze, FoV and Occlusion**, or `-executeMethod RemixTable.Editor.RemixFinalLayout.Apply`.
+
 ## Validation
 
 Use **Tools > Remix Table > Validate Saved Scene** for non-mutating serialized validation. **Generate Scene** regenerates the Remix scene and will replace its authored contents; preserve custom scene edits first. Unity's save prompt protects dirty open scenes in interactive use.

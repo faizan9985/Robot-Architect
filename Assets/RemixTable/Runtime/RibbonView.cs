@@ -7,6 +7,8 @@ namespace RemixTable
         public RemixTableManager manager;
         public StemId stem;
         public bool selected, wholeStem;
+        // 0..1 while the listener looks at this ribbon (RemixGazeFocus).
+        public float gazeGlow;
         public float regionStart, regionEnd;
         public double visualTime;
         Mesh mesh;
@@ -148,6 +150,8 @@ namespace RemixTable
                 if(snapGrid && BeatGrid.OnBeat(t,song.bpm,song.beatOffset,beatTolerance,out bool bar)) c*=bar?2.2f:1.5f;
                 // LOOP: the looped part glows slightly brighter than the rest.
                 if(looping && manager.audioManager.InLoop(t)) c*=1.25f;
+                // Gaze: the ribbon you look at lifts a little.
+                if(gazeGlow>0) c*=1+gazeGlow*.55f;
                 // Muted (or not soloed while another stem is) stems fade back.
                 if(silenced) c*=.22f;
                 colors[v]=colors[v+1]=c;

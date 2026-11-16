@@ -84,11 +84,12 @@ namespace RemixTable
                 go.transform.SetParent(source.transform, false);
                 var twin = go.GetComponent<AudioSource>(); if (twin == null) twin = go.AddComponent<AudioSource>();
                 twin.playOnAwake = false; twin.loop = true; twin.clip = source.clip;
-                twin.spatialBlend = source.spatialBlend; twin.volume = source.volume; twin.panStereo = source.panStereo;
+                twin.spatialBlend = source.spatialBlend; twin.spatialize = source.spatialize; twin.volume = source.volume; twin.panStereo = source.panStereo;
                 twin.outputAudioMixerGroup = source.outputAudioMixerGroup; twin.priority = source.priority; twin.pitch = 1;
                 twins[i] = twin;
             }
             lowpass = null; EnsureFilters(); // Give the twins their own filter chain.
+            applied3D = false;               // New twins get the 3D settings on the next update.
         }
         void CancelPendingLoop()
         {
@@ -212,13 +213,14 @@ namespace RemixTable
                     source.clip = clip;
                     source.playOnAwake = false;
                     source.loop = true;
-                    source.spatialBlend = 0;
+                    source.spatialBlend = 0; source.spatialize = false;
                     source.pitch = 1;
                     source.panStereo = 0;
                     source.volume = SafeHeadroom;
                 }
             }
             activeSet = 0;
+            applied3D = false; // Sources were just reset to 2D; SPATIAL re-applies 3D on the next update.
             manager.clock.Reset((float)((double)first.samples / first.frequency));
             EnsureFilters();
             for (int i = 0; i < sources.Length; i++) { ApplyFilter(i, 0); ApplyPitch(i, 0); pans[i] = 0; }
@@ -294,15 +296,24 @@ namespace RemixTable
             float blend = 1 - Mathf.Exp(-Time.unscaledDeltaTime / (manager.design != null ? Mathf.Max(.001f,manager.design.gainSmoothingSeconds) : .025f));
             var mix = manager.mix;
             Transform head = mix.spatial && Camera.main != null ? Camera.main.transform : null;
+            bool threeD = head != null && use3DAudio && manager.workspace != null && manager.design != null;
+            if (threeD != applied3D) Apply3D(threeD);
             string song = manager.library.Current.id;
             for (int i = 0; i < sources.Length; i++)
             {
                 var stem = (StemId)i;
                 float gain = manager.automation.EvaluateGain(song, stem, manager.clock.Time,manager.clock.duration,
                     manager.design != null ? manager.design.gainBoundaryFade : .06f);
-                gain *= mix.Factor(stem);
+                // Gaze audition (look at a ribbon + hold a pinch) plays that stem alone without touching the mix.
+                gain *= auditionStem >= 0 ? (auditionStem == i ? 1 : 0) : mix.Factor(stem);
                 float pan = 0;
-                if (head != null && manager.workspace != null && manager.design != null)
+                if (threeD)
+                {
+                    // Real 3D: the stem's source sits on its orb and the spatializer (Meta XR Audio HRTF + room
+                    // acoustics) does direction and distance; twins are children and follow.
+                    sources[i].transform.position = manager.SpatialWorld(mix.positions[i]);
+                }
+                else if (head != null && manager.workspace != null && manager.design != null)
                 {
                     StemMix.Spatialize(head.position, head.forward, manager.SpatialWorld(mix.positions[i]), out pan, out float distanceGain);
                     gain *= distanceGain;
@@ -324,7 +335,32 @@ namespace RemixTable
                 levels[i] = Mathf.Lerp(levels[i], Mathf.Clamp01(Mathf.Sqrt(sum / samples.Length) * 12), blend);
             }
         }
-        void OnApplicationPause(bool paused) { suspended = paused; ApplyPlaybackState(); }
+        // SPATIAL uses true 3D sources when a spatializer is configured (Meta XR Audio); otherwise stereo pan.
+        [Tooltip("SPATIAL mode places each stem's AudioSource on its orb and lets the spatializer plugin render it.")]
+        public bool use3DAudio = true;
+        [Min(.1f)] public float spatialMinDistance = 1.5f, spatialMaxDistance = 15f;
+        public int auditionStem = -1;
+        bool applied3D;
+        public bool Spatial3DActive => applied3D;
+        void Apply3D(bool on)
+        {
+            applied3D = on;
+            for (int i = 0; i < sources.Length; i++)
+                foreach (var s in twins == null ? new[] { sources[i] } : new[] { sources[i], twins[i] })
+                {
+                    if (s == null) continue;
+                    s.spatialize = on; s.spatialBlend = on ? 1 : 0; s.panStereo = 0;
+                    s.rolloffMode = AudioRolloffMode.Logarithmic; s.minDistance = spatialMinDistance; s.maxDistance = spatialMaxDistance;
+                    s.dopplerLevel = 0; s.spread = 0;
+                }
+            if (!on) for (int i = 0; i < pans.Length; i++) pans[i] = 0;
+        }
+        // The Quest system menu takes input focus without pausing the app: the song waits for you.
+        bool appPaused, focusLost;
+        void OnApplicationPause(bool paused) { appPaused = paused; suspended = appPaused || focusLost; ApplyPlaybackState(); }
+#if !UNITY_EDITOR
+        void OnApplicationFocus(bool focus) { focusLost = !focus; suspended = appPaused || focusLost; ApplyPlaybackState(); }
+#endif
         void OnDisable() => Stop();
     }
 }

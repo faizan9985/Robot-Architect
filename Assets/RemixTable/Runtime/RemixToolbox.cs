@@ -14,6 +14,7 @@ namespace RemixTable
         public SpatialStemField spatialField;
         public RemixRecorder recorder;                  // Found or added on the AudioListener when first used.
         public RemixVibes vibes;
+        public RemixOnboarding onboarding;
         [Tooltip("An IRemixToggle for passthrough (see Assets/Scripts/RemixPassthroughToggle).")]
         public MonoBehaviour passthrough;
         [Tooltip("An IRemixToggle for voice commands (see RemixTable.Voice).")]
@@ -89,6 +90,7 @@ namespace RemixTable
                 case RemixCommandKind.RecordStop:
                     if (recorder == null || !recorder.Recording) return false;
                     var file = recorder.StopRecording(); Say("SAVED " + System.IO.Path.GetFileName(file), 5); return true;
+                case RemixCommandKind.Tutorial: if (onboarding == null) return false; onboarding.Restart(); return true;
                 case RemixCommandKind.VibeChill: return Vibe(RemixVibe.Chill);
                 case RemixCommandKind.VibeHype: return Vibe(RemixVibe.Hype);
                 case RemixCommandKind.VibeKaraoke: return Vibe(RemixVibe.Karaoke);
