@@ -20,7 +20,7 @@ namespace RemixTable.Tests
             var waveform=ScriptableObject.CreateInstance<WaveformCache>();
             waveform.Initialize(48000,96000,96000,.25f/32767,new byte[]{1,128,255,127,130,90},new[]{0},new[]{1});
             var song=new SongMetadata{id="region",stems=new StemMetadata[4]};
-            for(int i=0;i<4;i++){audio.sources[i]=root.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip,waveform=waveform};}
+            for(int i=0;i<4;i++){var stemObject=new GameObject("stem "+i);stemObject.transform.SetParent(root.transform);audio.sources[i]=stemObject.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip,waveform=waveform};}
             var ribbonObject=new GameObject("gain ribbon");ribbonObject.transform.SetParent(root.transform);
             var ribbon=ribbonObject.AddComponent<RibbonView>();ribbon.manager=manager;ribbon.stem=StemId.Bass;
             manager.library.songs=new[]{song,new SongMetadata{id="different",stems=song.stems}};
@@ -114,7 +114,7 @@ namespace RemixTable.Tests
             audio.sources=new AudioSource[4];
             var song=new SongMetadata{id="test",stems=new StemMetadata[4]};
             var clip=AudioClip.Create("one second",48000,1,48000,false);
-            for(int i=0;i<4;i++){audio.sources[i]=root.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip};}
+            for(int i=0;i<4;i++){var stemObject=new GameObject("stem "+i);stemObject.transform.SetParent(root.transform);audio.sources[i]=stemObject.AddComponent<AudioSource>();song.stems[i]=new StemMetadata{id=(StemId)i,clip=clip};}
             manager.library.songs=new[]{song};root.SetActive(true);audio.Load(song);
             Assert.Greater(audio.ScheduledStart,AudioSettings.dspTime);
             yield return new WaitForSeconds(.5f);

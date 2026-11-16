@@ -75,6 +75,16 @@ namespace RemixTable
         public RoomModel room;
         // Pose the table was originally anchored at in front of the user (where ROOM mode returns it).
         public Pose SeatedPose { get; private set; }
+        // Accessibility "CLOSER": < 1 brings the whole table toward the listener (shorter reach, rows higher).
+        [Range(.6f, 1)] public float reachScale = 1;
+        // Rescales the workspace about the head anchor so the ribbon arc stays centered on the listener.
+        public void SetWorkspaceScale(float scale)
+        {
+            if (workspace == null || scale <= 0) return;
+            var anchor = HeadAnchorWorld;
+            workspace.localScale = Vector3.one * scale;
+            workspace.position = anchor - workspace.rotation * (HeadAnchorLocal * scale);
+        }
         public event System.Action Anchored;
         // Stem pitch in semitones at the playhead (PITCH automation).
         public float PitchAt(StemId stem, float time) =>
@@ -103,6 +113,7 @@ namespace RemixTable
                 var cam = Camera.main.transform;
                 var pose=design.SeatedPose(cam.position,cam.forward);
                 workspace.SetPositionAndRotation(pose.position,pose.rotation);
+                if (reachScale < .999f) SetWorkspaceScale(reachScale);
                 SeatedPose = pose;
                 anchored = true;
                 Anchored?.Invoke();

@@ -16,6 +16,10 @@ namespace RemixTable.Tests
             #endif
             yield return new WaitForSeconds(2);
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var transport=Object.FindFirstObjectByType<RemixTransport>();
+            manager.library.skipSilentSongs=false; // This test steps through the silent placeholder on purpose.
+            // Start from a clean remix and never write the test's edits into the real save folder.
+            var persistence=manager.GetComponent<RemixPersistence>();if(persistence!=null) persistence.enabled=false;
+            manager.automation.edits.Clear();manager.mix.CopyFrom(null);
             Assert.IsTrue(manager.anchored);Assert.IsTrue(manager.audioManager.Ready);
             Assert.AreEqual(1,Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(1,Object.FindObjectsByType<XRUIInputModule>(FindObjectsSortMode.None).Length);

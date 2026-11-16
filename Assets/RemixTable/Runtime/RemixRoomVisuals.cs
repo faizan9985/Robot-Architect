@@ -70,6 +70,16 @@ namespace RemixTable
         }
 
         public void Hide() { Clear(); Shader.SetGlobalVector(RevealId, Vector4.zero); }
+        [Tooltip("Overall brightness (high-contrast mode raises it).")]
+        [Min(0)] public float intensityScale = 1;
+
+        // A burst of full-strength ripples (Daily Drop complete).
+        public void Celebrate()
+        {
+            if (!showing) return;
+            ages = new Vector4(0, .18f, .36f, .54f);
+            strengths = new Vector4(1.4f, 1.2f, 1f, .8f);
+        }
 
         void Clear()
         {
@@ -220,7 +230,7 @@ namespace RemixTable
             block.SetVector(SizeId, new Vector4(size.x, size.y, 0, 0));
             block.SetFloat(LevelId, level);
             block.SetFloat(FillId, fill);
-            block.SetFloat(IntensityId, intensity);
+            block.SetFloat(IntensityId, intensity * intensityScale);
             r.SetPropertyBlock(block);
         }
     }

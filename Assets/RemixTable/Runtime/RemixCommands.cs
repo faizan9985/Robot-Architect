@@ -6,7 +6,8 @@ namespace RemixTable
         None, Mute, Unmute, Solo, Unsolo, ClearStem, ResetAll, UnmuteAll,
         Undo, Redo, Play, Pause, NextSong, PreviousSong,
         VolumeMode, FilterMode, PitchMode, EditMode, LiveMode,
-        SnapOn, SnapOff, LoopOn, LoopOff, SpatialOn, SpatialOff, RecordStart, RecordStop, PassthroughOn, PassthroughOff
+        SnapOn, SnapOff, LoopOn, LoopOff, SpatialOn, SpatialOff, RecordStart, RecordStop, PassthroughOn, PassthroughOff,
+        VibeChill, VibeHype, VibeKaraoke, VibeBreakdown, VibeAcapella, VibeNormal
     }
     public struct RemixCommand
     {
@@ -50,6 +51,14 @@ namespace RemixTable
             if (Has(text, "solo|only|isolate|just") && stem) return new RemixCommand(RemixCommandKind.Solo, id);
             if (Has(text, "reset|clear|start over|wipe") && Has(text, "all|everything|song|remix|over")) return new RemixCommand(RemixCommandKind.ResetAll);
             if (Has(text, "reset|clear|wipe") && stem) return new RemixCommand(RemixCommandKind.ClearStem, id);
+
+            // Vibes: one phrase reshapes the whole mix ("make it chill", "karaoke", "back to normal").
+            if (Has(text, "back to normal|bring it back|normal|original mix|original|no vibe|clear the vibe|clear vibe")) return new RemixCommand(RemixCommandKind.VibeNormal);
+            if (Has(text, "karaoke|sing along|singalong|instrumental|no vocals")) return new RemixCommand(RemixCommandKind.VibeKaraoke);
+            if (Has(text, "acapella|a cappella|a capella|acappella")) return new RemixCommand(RemixCommandKind.VibeAcapella);
+            if (Has(text, "breakdown|break it down|strip it down|stripped|strip it")) return new RemixCommand(RemixCommandKind.VibeBreakdown);
+            if (Has(text, "chill|chilled|chiller|relax|relaxed|calm|mellow|lofi|lo fi|smooth|laid back")) return new RemixCommand(RemixCommandKind.VibeChill);
+            if (Has(text, "hype|hyped|pump it up|pump|hit harder|harder|energy|energetic|banger|party|turn it up")) return new RemixCommand(RemixCommandKind.VibeHype);
 
             if (Has(text, "undo|take that back|go back a step")) return new RemixCommand(RemixCommandKind.Undo);
             if (Has(text, "redo")) return new RemixCommand(RemixCommandKind.Redo);

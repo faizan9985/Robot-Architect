@@ -32,6 +32,7 @@ namespace RemixTable.Tests
                 }
             }
             Assert.AreEqual(1,origins);Assert.AreEqual(1,interactions);Assert.AreEqual(1,menus);Assert.AreEqual(1,events);
+            manager.library.skipSilentSongs=false; // Switch to the silent placeholder on purpose.
             manager.library.Select(1);Assert.Less(manager.clock.Time,.1f);
             foreach(var ribbon in manager.ribbons) Assert.IsFalse(ribbon.selected);
         }

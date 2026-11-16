@@ -51,7 +51,9 @@ namespace RemixTable
             Plan = plan; radius = settings.radius;
             bool first = manager.room == null;
             manager.room = room;
-            MoveTo(plan.pose, plan.scale);
+            anchor = eye + Vector3.up * plan.lift;
+            float reach = Mathf.Clamp(manager.reachScale, .5f, 1);
+            MoveTo(RoomPlacement.WorkspacePose(anchor, plan.forward, plan.scale * reach, manager.HeadAnchorLocal), plan.scale * reach);
             HangStems(room, eye, plan);
             // The reveal sweep plays when ROOM mode starts; a refined scan just redraws the surfaces.
             if (visuals != null) visuals.Show(room, plan.desk, eye, reveal: first);
@@ -75,7 +77,8 @@ namespace RemixTable
             }
             if (was && manager.design != null)
             {
-                MoveTo(manager.design.SeatedPose(eye, gaze), 1);
+                float reach = Mathf.Clamp(manager.reachScale, .5f, 1);
+                MoveTo(RoomPlacement.WorkspacePose(eye, gaze, reach, manager.HeadAnchorLocal), reach);
                 if (toolbox != null) toolbox.Say("TABLE BACK IN FRONT OF YOU");
             }
         }
@@ -98,6 +101,16 @@ namespace RemixTable
             spotsApplied = true;
         }
 
+        Vector3 anchor;
+        // Accessibility CLOSER changed: glide to the same spot at the new size (arc stays centered on the head).
+        public void ApplyReach()
+        {
+            if (manager == null || manager.workspace == null) return;
+            float reach = Mathf.Clamp(manager.reachScale, .5f, 1);
+            float baseScale = Placed ? Plan.scale : 1;
+            var head = Placed ? anchor : manager.HeadAnchorWorld;
+            MoveTo(RoomPlacement.WorkspacePose(head, manager.workspace.forward, baseScale * reach, manager.HeadAnchorLocal), baseScale * reach);
+        }
         void MoveTo(Pose pose, float scale)
         {
             var w = manager.workspace;

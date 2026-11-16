@@ -36,27 +36,40 @@ namespace RemixTable
                 float denominator = a - 2 * b + c;
                 if (Mathf.Abs(denominator) > 1e-12f) refined += Mathf.Clamp(.5f * (a - c) / denominator, -.5f, .5f);
             }
-            result.bpm = frameRate * 60 / refined;
             float mean = total / Mathf.Max(1, maxLag - minLag + 1);
             result.confidence = best > 0 ? Mathf.Clamp01(1 - mean / best) : 0;
-            // Beat phase: try offsets across one beat and keep the one whose comb collects the most onset energy.
+            // Beat grid: search period and phase together. A period that is off by even 1% drifts by a whole
+            // beat over a 100-beat song, so fitting phase alone to the autocorrelation period smears the comb
+            // and lands between beats. A narrow period sweep (+-2%) around the estimate keeps the grid locked.
             float period = refined; float bestPhaseScore = float.MinValue; float bestPhase = 0;
-            int steps = Mathf.Max(8, Mathf.CeilToInt(period * 2));
-            for (int s = 0; s < steps; s++)
+            for (int k = -40; k <= 40; k++)
             {
-                float phase = period * s / steps; double sum = 0;
-                for (float f = phase; f < frames - 1; f += period)
+                float candidate = refined * (1 + k * .0005f);
+                int steps = Mathf.Max(8, Mathf.CeilToInt(candidate * 2));
+                for (int s = 0; s < steps; s++)
                 {
-                    int i = (int)f; float t = f - i;
-                    sum += onset[i] * (1 - t) + onset[i + 1] * t;
+                    float phase = candidate * s / steps;
+                    float sum = Comb(onset, frames, phase, candidate);
+                    if (sum > bestPhaseScore) { bestPhaseScore = sum; bestPhase = phase; period = candidate; }
                 }
-                if (sum > bestPhaseScore) { bestPhaseScore = (float)sum; bestPhase = phase; }
             }
+            result.bpm = frameRate * 60 / period;
             // An attack first shows up in the frame whose window end reaches it, so the attack sits near the end
             // of that frame (half a hop before it on average). Wrap into the first beat.
             float beatSeconds = period * Hop / sampleRate;
             result.offset = Mathf.Repeat((bestPhase * Hop + Frame - Hop * .5f) / sampleRate, beatSeconds);
             return result;
+        }
+        // Mean onset strength sampled on a beat grid (linear interpolation between frames).
+        static float Comb(float[] onset, int frames, float phase, float period)
+        {
+            double sum = 0; int count = 0;
+            for (float f = phase; f < frames - 1; f += period)
+            {
+                int i = (int)f; float t = f - i;
+                sum += onset[i] * (1 - t) + onset[i + 1] * t; count++;
+            }
+            return count == 0 ? 0 : (float)(sum / count);
         }
         static float[] OnsetEnvelope(float[] mono, out int frames)
         {
