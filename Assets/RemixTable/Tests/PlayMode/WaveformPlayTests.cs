@@ -4,6 +4,21 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
+    // Captures both values together after normal ribbon rendering, also in batch-mode tests.
+    [DefaultExecutionOrder(32000)]
+    public sealed class WaveformTimingSample : MonoBehaviour
+    {
+        public RibbonView ribbon;
+        public bool pending;
+        public int frame;
+        public double visualTime,songTime;
+        void LateUpdate()
+        {
+            if(!pending) return;
+            visualTime=ribbon.visualTime;songTime=ribbon.manager.clock.elapsed;
+            frame=Time.frameCount;pending=false;
+        }
+    }
     public class WaveformPlayTests
     {
         [UnityTest] public IEnumerator RealAudioWaveformsFollowDSPZoomEditsAndLoops()
@@ -17,10 +32,21 @@ namespace RemixTable.Tests
             var ribbon=manager.ribbons[0];var song=manager.library.Current;WaveformCache cache=null;
             foreach(var data in song.stems)if(data.id==ribbon.stem)cache=data.waveform;
             Assert.NotNull(cache);var mesh=ribbon.WaveformMesh;int count=mesh.vertexCount;
+            var timing=manager.gameObject.AddComponent<WaveformTimingSample>();timing.ribbon=ribbon;
+            AudioSettings.GetDSPBufferSize(out int bufferSamples,out int bufferCount);
+            Debug.Log($"WAVEFORM_DSP sampleRate={AudioSettings.outputSampleRate} bufferSamples={bufferSamples} bufferCount={bufferCount}");
             foreach(float seconds in new[]{4,8,16,32})
             {
                 manager.zoom.Request(seconds);yield return new WaitForSeconds(1.8f);
-                Assert.That(ribbon.visualTime,Is.EqualTo(manager.clock.elapsed).Within(.04));
+                // WaitForSeconds resumes between Update and LateUpdate. Observe the actual render
+                // path after the ribbon's LateUpdate, without invoking UpdateWaveform from the test.
+                double beforeLateMs=System.Math.Abs(ribbon.visualTime-manager.clock.elapsed)*1000;
+                int requestedFrame=Time.frameCount;timing.pending=true;
+                yield return null;
+                Assert.IsFalse(timing.pending,"render timing sample must complete");
+                Assert.GreaterOrEqual(timing.frame,requestedFrame);
+                Debug.Log($"WAVEFORM_TIMING zoom={seconds} beforeLateMs={beforeLateMs:F6} renderedDeltaMs={System.Math.Abs(timing.visualTime-timing.songTime)*1000:F6}");
+                Assert.That(timing.visualTime,Is.EqualTo(timing.songTime).Within(.04));
                 float coordinate=manager.design.width*.2f;float stamp=ribbon.Timestamp(coordinate);
                 var expected=cache.Query(stamp,seconds/512);var actual=ribbon.EnvelopeAt(coordinate,seconds/512);
                 Assert.AreEqual(expected.maximum,actual.maximum);Assert.AreSame(mesh,ribbon.WaveformMesh);Assert.AreEqual(count,mesh.vertexCount);
