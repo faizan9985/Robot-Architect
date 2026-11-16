@@ -25,6 +25,7 @@ namespace RemixTable
         {
             if(edit.parameter==ParameterType.Gain) edit.value=SafeGain(edit.value);
             else if(edit.parameter==ParameterType.Effect) edit.value=StemFilter.SafeEffect(edit.value);
+            else if(edit.parameter==ParameterType.Pitch) edit.value=float.IsNaN(edit.value) || float.IsInfinity(edit.value) ? 0 : Mathf.Clamp(edit.value,-PitchShiftDsp.MaxSemitones,PitchShiftDsp.MaxSemitones);
             int index = edits.FindIndex(x => x.id == edit.id);
             if (index >= 0) edits.RemoveAt(index);
             edits.Add(edit); // Last committed/updated edit has priority.
@@ -85,6 +86,8 @@ namespace RemixTable
     {
         public string id, title;
         public float duration = 32, bpm = 110;
+        // Time of the first downbeat in seconds; SNAP aligns region edges to beats counted from here.
+        public float beatOffset;
         public int seed;
         public StemMetadata[] stems;
     }

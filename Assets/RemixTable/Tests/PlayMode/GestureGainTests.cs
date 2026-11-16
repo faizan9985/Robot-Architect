@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class GestureGainTests
+    public class GestureGainTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator HandGesturesReachAudioAndPreserveGlobalPauseOwnership()
         {

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class TimelineZoomPlayTests
+    public class TimelineZoomPlayTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator InlineToolbarSwitchesMenusAndTracksGestureZoomAtDoubleSpeed()
         {

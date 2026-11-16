@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class PlaybackTests
+    public class PlaybackTests : RemixSavedSceneTest
     {
         #if UNITY_EDITOR
         [UnityTest] public IEnumerator SavedSceneStartsWithInheritedXrAndFourAnimatedRibbons()

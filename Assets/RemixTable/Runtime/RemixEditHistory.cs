@@ -9,8 +9,15 @@ namespace RemixTable
     public sealed class RemixEditHistory
     {
         public const int MaxSteps = 20;
-        readonly List<List<AutomationEdit>> undo = new List<List<AutomationEdit>>(), redo = new List<List<AutomationEdit>>();
-        List<AutomationEdit> pending;
+        sealed class State : List<AutomationEdit>
+        {
+            public StemMix mix;
+            public bool loop;
+            public float start,end;
+        }
+        public RemixTableManager Manager { get; set; }
+        readonly List<State> undo = new List<State>(), redo = new List<State>();
+        State pending;
         public bool CanUndo => undo.Count > 0;
         public bool CanRedo => redo.Count > 0;
         public int UndoCount => undo.Count;
@@ -19,13 +26,13 @@ namespace RemixTable
         // Bumped on every change so UI can refresh cheaply.
         public int Version { get; private set; }
 
-        public void BeginGesture(AutomationStore store) => pending = Snapshot(store);
+        public void BeginGesture(AutomationStore store, bool includeMixAndLoop = false) => pending = Snapshot(store,includeMixAndLoop);
         // Returns true when the finished hold was recorded as an undo step.
         public bool EndGesture(AutomationStore store)
         {
             if (pending == null) return false;
             var before = pending; pending = null;
-            if (Same(before, store.edits)) return false;
+            if (Same(before, store.edits) && SameExtras(before)) return false;
             Push(undo, before);
             redo.Clear(); Version++;
             return true;
@@ -34,25 +41,49 @@ namespace RemixTable
         public bool Redo(AutomationStore store) => Step(store, redo, undo);
         public void Clear() { undo.Clear(); redo.Clear(); pending = null; Version++; }
 
-        bool Step(AutomationStore store, List<List<AutomationEdit>> from, List<List<AutomationEdit>> to)
+        bool Step(AutomationStore store, List<State> from, List<State> to)
         {
             if (from.Count == 0) return false;
             pending = null;
-            Push(to, Snapshot(store));
-            var state = from[from.Count - 1]; from.RemoveAt(from.Count - 1);
+            var state = from[from.Count - 1];
+            Push(to, Snapshot(store,state.mix!=null));
+            from.RemoveAt(from.Count - 1);
             store.edits.Clear();
             foreach (var e in state) store.edits.Add(Clone(e)); // Stored snapshots stay immutable.
+            if(state.mix!=null && Manager!=null)
+            {
+                Manager.mix.CopyFrom(state.mix);
+                if(Manager.audioManager!=null)
+                {
+                    if(state.loop) Manager.audioManager.SetLoop(state.start,state.end);
+                    else Manager.audioManager.ClearLoop();
+                }
+            }
             Version++;
             return true;
         }
-        static void Push(List<List<AutomationEdit>> stack, List<AutomationEdit> state)
+        bool SameExtras(State state)
+        {
+            if(state.mix==null || Manager==null) return true;
+            var mix=Manager.mix;
+            for(int i=0;i<4;i++) if(state.mix.muted[i]!=mix.muted[i] || state.mix.soloed[i]!=mix.soloed[i] || state.mix.positions[i]!=mix.positions[i]) return false;
+            var audio=Manager.audioManager;
+            return state.mix.spatial==mix.spatial && (audio==null || (state.loop==audio.LoopActive && (!state.loop || (state.start==audio.LoopStart && state.end==audio.LoopEnd))));
+        }
+        static void Push(List<State> stack, State state)
         {
             stack.Add(state);
             if (stack.Count > MaxSteps) stack.RemoveAt(0);
         }
-        static List<AutomationEdit> Snapshot(AutomationStore store)
+        State Snapshot(AutomationStore store, bool includeMixAndLoop=false)
         {
-            var copy = new List<AutomationEdit>(store.edits.Count);
+            var copy = new State();
+            if(includeMixAndLoop && Manager!=null)
+            {
+                copy.mix=new StemMix();copy.mix.CopyFrom(Manager.mix);
+                var audio=Manager.audioManager;
+                if(audio!=null) { copy.loop=audio.LoopActive;copy.start=audio.LoopStart;copy.end=audio.LoopEnd; }
+            }
             foreach (var e in store.edits) copy.Add(Clone(e));
             return copy;
         }

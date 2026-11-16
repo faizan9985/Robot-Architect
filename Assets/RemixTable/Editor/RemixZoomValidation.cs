@@ -46,6 +46,7 @@ namespace RemixTable.Editor
             RemixSeatedLayout.ValidateZoom();
             RibbonVisualValidation.Validate();
             RemixModeLayout.Validate();
+            RemixFeatureLayout.Validate();
             var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
             var origin=UnityEngine.Object.FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>();
             RemixSceneBuilder.Require(manager.workspaceCamera==origin.Camera,"workspace uses tracked rig camera");

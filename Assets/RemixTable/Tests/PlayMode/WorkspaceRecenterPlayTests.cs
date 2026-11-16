@@ -5,7 +5,7 @@ using UnityEngine.TestTools;
 using UnityEngine.XR;
 namespace RemixTable.Tests
 {
-    public class WorkspaceRecenterPlayTests
+    public class WorkspaceRecenterPlayTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator SavedSceneRecentersCoherentlyAndReleasesPausedLiveAndZoomOwners()
         {
@@ -15,6 +15,9 @@ namespace RemixTable.Tests
             yield return new WaitForSeconds(2);
             var manager=Object.FindFirstObjectByType<RemixTableManager>();
             Assert.IsTrue(manager.anchored);Assert.NotNull(manager.workspaceCamera);
+            Assert.NotNull(manager.navigationToolbar);Assert.NotNull(manager.speedSelector);
+            Assert.NotNull(Object.FindFirstObjectByType<RemixToolbox>());Assert.NotNull(Object.FindFirstObjectByType<RemixMixControls>());
+            Assert.NotNull(Object.FindFirstObjectByType<RemixPersistence>());
             var root=manager.workspace;var audio=manager.audioManager;var gestures=manager.interactions;
             manager.enabled=false;gestures.enabled=false;
             var ribbon=manager.ribbons[0];
@@ -33,10 +36,10 @@ namespace RemixTable.Tests
             {
                 var release=Hand();release.pinch=false;gestures.ProcessHands(release,release,.016f);
             }
-            for(int pass=0;pass<2;pass++)
+            for(int pass=0;pass<3;pass++)
             {
                 audio.LiveMode=pass==1;
-                gestures.Mode=pass==1?RibbonInteractionManager.ControlMode.Filter:RibbonInteractionManager.ControlMode.Volume;
+                gestures.Mode=pass==0?RibbonInteractionManager.ControlMode.Volume:pass==1?RibbonInteractionManager.ControlMode.Filter:RibbonInteractionManager.ControlMode.Pitch;
                 Release();gestures.ProcessHands(Hand(),default,.016f);gestures.ProcessHands(Hand(.03f),default,.016f);
                 Assert.AreEqual(1,audio.EditingPauseCount);Assert.AreEqual(pass==1,manager.clock.playing);
                 var edit=manager.automation.edits[manager.automation.edits.Count-1];

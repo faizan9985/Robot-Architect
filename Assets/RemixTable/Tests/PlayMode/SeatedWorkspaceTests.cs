@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 namespace RemixTable.Tests
 {
-    public class SeatedWorkspaceTests
+    public class SeatedWorkspaceTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator SavedWorkspaceTransportAndPalmPreserveAudioAndEditing()
         {

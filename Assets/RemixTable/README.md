@@ -80,3 +80,15 @@ Audio playback: NIVIROTest now plays four scheduled stems on scene start. See AU
 
 
 
+
+Integrated features: playback speed (0.25x–2x) advances the shared song clock and
+all primary/loop-twin sources together. Pitch automation uses the separate
+semitone DSP and does not change song-time speed. Loop lead times are converted
+from song seconds to DSP seconds at the current playback speed.
+
+RESET ALL is one undoable step covering automation, mute/solo and the active
+loop. Ordinary ribbon-edit history retains its automation-only behavior. Spatial
+placement is not reset. Recording uses unique, exclusively created filenames;
+queued blocks retain channel/sample-rate/session metadata and incompatible blocks
+are dropped. Voice remains unavailable until a Wit configuration is supplied.
+Spatial rendering is stereo pan/attenuation, not binaural/HRTF.

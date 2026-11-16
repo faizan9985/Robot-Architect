@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class AudioTests
+    public class AudioTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator RegionGainRoutesToStemAndSurvivesEditingPauseLoopAndSongSwitch()
         {

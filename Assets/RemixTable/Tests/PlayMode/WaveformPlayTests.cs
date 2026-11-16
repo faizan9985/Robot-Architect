@@ -19,7 +19,7 @@ namespace RemixTable.Tests
             frame=Time.frameCount;pending=false;
         }
     }
-    public class WaveformPlayTests
+    public class WaveformPlayTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator RealAudioWaveformsFollowDSPZoomEditsAndLoops()
         {

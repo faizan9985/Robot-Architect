@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class StemFilterAudioTests
+    public class StemFilterAudioTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator EffectAutomationDrivesOnlyThatStemsFilters()
         {

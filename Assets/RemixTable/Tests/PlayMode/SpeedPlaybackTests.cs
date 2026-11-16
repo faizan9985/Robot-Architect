@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class SpeedPlaybackTests
+    public class SpeedPlaybackTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator PopoutPresetsDriveSynchronizedSongTimeAndPreserveEditingAndZoom()
         {

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 namespace RemixTable.Tests
 {
-    public class LivePlaybackTests
+    public class LivePlaybackTests : RemixSavedSceneTest
     {
         [UnityTest] public IEnumerator MergedSceneSupportsLiveSideModesPausedRegionsZoomAndTransport()
         {
