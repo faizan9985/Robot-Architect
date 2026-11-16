@@ -113,6 +113,10 @@ namespace RemixTable
                 rawEnvelope[i]=cache==null?default:cache.Query((first+i-2)*step,step);
             for(int i=2;i<smoothEnvelope.Length-2;i++) smoothEnvelope[i]=RibbonEnvelope.Smooth(rawEnvelope,i,d);
             float heightLimit=d.laneHeight*.5f-.003f;
+            bool silenced=!manager.mix.Audible(stem);
+            bool snapGrid=manager.snapToBeat && BeatGrid.Valid(song.bpm);
+            bool looping=manager.audioManager!=null && manager.audioManager.LoopActive;
+            float beatTolerance=(float)(window/n)*.5f; // Half a vertex step: one lit vertex pair per beat.
             for (int i=0;i<=n;i++)
             {
                 float x = (i/(float)n-.5f)*d.width, t=Timestamp(x);
@@ -136,7 +140,16 @@ namespace RemixTable
                 edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,0);
                 Color c=effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
+                // Pitch: shifted-up parts lean warm, shifted-down parts lean cool.
+                float semitones=manager.automation.Evaluate(song.id,stem,ParameterType.Pitch,t,manager.clock.duration);
+                if(semitones!=0) c=Color.Lerp(c,semitones>0?new Color(1,.85f,.3f):new Color(.35f,.45f,1),Mathf.Clamp01(Mathf.Abs(semitones)/12f)*.6f+.15f);
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
+                // SNAP shows the beat grid as thin bright lines (brighter on each bar's first beat).
+                if(snapGrid && BeatGrid.OnBeat(t,song.bpm,song.beatOffset,beatTolerance,out bool bar)) c*=bar?2.2f:1.5f;
+                // LOOP: the looped part glows slightly brighter than the rest.
+                if(looping && manager.audioManager.InLoop(t)) c*=1.25f;
+                // Muted (or not soloed while another stem is) stems fade back.
+                if(silenced) c*=.22f;
                 colors[v]=colors[v+1]=c;
             }
             mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);

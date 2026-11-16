@@ -17,6 +17,14 @@ namespace RemixTable
         [Header("Filter (lift in FILTER mode)")]
         [Tooltip("Hand lift (meters) from neutral to a full high-pass (up) or low-pass (down) sweep.")]
         [Min(.01f)] public float filterDragDistance = .12f;
+        // PITCH mode: lifting by 2 x pitchDistance spans maxSemitones; the result snaps to whole semitones so
+        // shifted parts stay in tune with the rest of the song.
+        public float MapDragPitch(float initial, float localDisplacement)
+        {
+            float range = Mathf.Clamp(maxSemitones, 1, PitchShiftDsp.MaxSemitones);
+            float raw = initial + localDisplacement / Mathf.Max(.01f, pitchDistance * 2) * range;
+            return Mathf.Clamp(Mathf.Round(raw), -range, range);
+        }
         public float MapDragFilter(float initial, float localDisplacement) =>
             StemFilter.SafeEffect(initial + localDisplacement / Mathf.Max(.01f, filterDragDistance));
         public float MapDragGain(float initial, float localDisplacement)

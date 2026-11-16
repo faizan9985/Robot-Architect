@@ -1,0 +1,5 @@
+﻿{
+  "name": "RemixTable.Voice",
+  "references": ["RemixTable.Runtime", "Meta.WitAi", "Meta.Wit.Dictation", "VoiceSDK.Dictation.Runtime", "Meta.WitAi.Lib", "VoiceSDK.Runtime"],
+  "autoReferenced": true
+}

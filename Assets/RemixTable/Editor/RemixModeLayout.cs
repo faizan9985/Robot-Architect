@@ -39,9 +39,9 @@ namespace RemixTable.Editor
         public static void ApplyPlayback() => Apply();
         [MenuItem("Tools/Remix Table/Add Undo-Redo Buttons")]
         public static void ApplyHistory() => Apply();
-        static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y) =>
+        internal static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y) =>
             Row(manager, transport, name, y, new Vector2(manager.design.panelWidth, Height));
-        static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y, Vector2 size)
+        internal static RectTransform Row(RemixTableManager manager, RemixTransport transport, string name, float y, Vector2 size)
         {
             var transportCanvas = transport.GetComponent<Canvas>();
             var rect = RemixSeatedLayout.Rect(manager.workspace, name, Vector2.zero, size * 1000);
@@ -61,11 +61,12 @@ namespace RemixTable.Editor
             var rect = Row(manager, transport, CanvasName, CanvasY(d));
             var selector = rect.GetComponent<RemixModeSelector>(); if (selector == null) selector = rect.gameObject.AddComponent<RemixModeSelector>();
             selector.manager = manager;
-            RemixSeatedLayout.Text(rect, "ModeHeading", "PINCH EDITS", new Vector2(-235, 0), new Vector2(170, 40), 15, font);
-            selector.volumeButton = RemixSeatedLayout.Button(rect, "VolumeMode", "VOLUME", -40, 180, font, selector.SelectVolume);
-            selector.filterButton = RemixSeatedLayout.Button(rect, "FilterMode", "FILTER", 160, 180, font, selector.SelectFilter);
-            foreach (var b in new[] { selector.volumeButton, selector.filterButton }) ((RectTransform)b.transform).anchoredPosition = new Vector2(((RectTransform)b.transform).anchoredPosition.x, 0);
-            selector.volumeButton.image.color = selector.selectedColor; selector.filterButton.image.color = selector.idleColor;
+            RemixSeatedLayout.Text(rect, "ModeHeading", "PINCH EDITS", new Vector2(-280, 0), new Vector2(160, 40), 15, font);
+            selector.volumeButton = RemixSeatedLayout.Button(rect, "VolumeMode", "VOLUME", -105, 150, font, selector.SelectVolume);
+            selector.filterButton = RemixSeatedLayout.Button(rect, "FilterMode", "FILTER", 55, 150, font, selector.SelectFilter);
+            selector.pitchButton = RemixSeatedLayout.Button(rect, "PitchMode", "PITCH", 215, 150, font, selector.SelectPitch);
+            foreach (var b in new[] { selector.volumeButton, selector.filterButton, selector.pitchButton }) ((RectTransform)b.transform).anchoredPosition = new Vector2(((RectTransform)b.transform).anchoredPosition.x, 0);
+            selector.volumeButton.image.color = selector.selectedColor; selector.filterButton.image.color = selector.idleColor; selector.pitchButton.image.color = selector.idleColor;
             transport.palmInstructions.text = RemixTransport.Guidance;
             EditorUtility.SetDirty(selector); EditorUtility.SetDirty(transport.palmInstructions);
             BuildPlayback(manager, transport);
@@ -165,7 +166,7 @@ namespace RemixTable.Editor
             var selector = RemixSceneBuilder.All<RemixModeSelector>(scene).Single();
             RemixSceneBuilder.Require(manager.interactions != null && selector.manager == manager, "mode selector wired to manager");
             RemixSceneBuilder.Require(selector.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace && selector.GetComponent<TrackedDeviceGraphicRaycaster>() != null, "mode canvas is pokeable world UI");
-            foreach (var (button, method) in new[] { (selector.volumeButton, nameof(RemixModeSelector.SelectVolume)), (selector.filterButton, nameof(RemixModeSelector.SelectFilter)) })
+            foreach (var (button, method) in new[] { (selector.volumeButton, nameof(RemixModeSelector.SelectVolume)), (selector.filterButton, nameof(RemixModeSelector.SelectFilter)), (selector.pitchButton, nameof(RemixModeSelector.SelectPitch)) })
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == selector && button.onClick.GetPersistentMethodName(0) == method, "mode binding " + button.name);
             var transport = RemixSceneBuilder.All<RemixTransport>(scene).Single();
             RemixSceneBuilder.Require(transport.palmInstructions.text == RemixTransport.Guidance, "palm guidance mentions modes");

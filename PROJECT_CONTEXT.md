@@ -1,5 +1,6 @@
-Current project: `X:\Capstone\Robot Architect`.
-Open `Assets/RobotArchitect/Scenes/RobotArchitect.unity`; this is the only build scene.
+Current project: `X:\Capstone\Robot Architect` (on some machines it is checked out elsewhere, e.g. `Downloads\Robot-Architect`).
+The build scene is `Assets/RemixTable/Scenes/RemixTable.unity` (the Remix Table, see README.md).
+`Assets/RobotArchitect/Scenes/RobotArchitect.unity` is still in the project but disabled in the build list.
 The following XR setup/debugging history explains the inherited working configuration.
 Historical test objects describe setup investigations; current content is documented
 in README.md. Preserve the working rig and Meta hand tracking configuration.
