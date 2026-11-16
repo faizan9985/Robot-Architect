@@ -41,8 +41,12 @@ namespace RemixTable.Tests
                 Assert.AreEqual(1,audio.EditingPauseCount);Assert.AreEqual(pass==1,manager.clock.playing);
                 var edit=manager.automation.edits[manager.automation.edits.Count-1];
                 float start=edit.start,end=edit.end,value=edit.value;
+                Assert.IsTrue(manager.history.GestureOpen);
+                int undoBefore=manager.history.UndoCount;
                 manager.RequestWorkspaceAlignment();head.position+=new Vector3(.2f,.04f,-.1f);Align(pass+1);
                 Assert.IsFalse(manager.WorkspaceAligning);Assert.IsNull(gestures.ActiveRibbon);Assert.IsFalse(manager.IsEditing);
+                Assert.IsFalse(manager.history.GestureOpen,"recenter closes the undo gesture");
+                Assert.AreEqual(undoBefore+1,manager.history.UndoCount,"recenter preserves the completed edit as one undo step");
                 Assert.AreEqual(0,audio.EditingPauseCount);Assert.IsTrue(manager.clock.playing);
                 Assert.AreEqual(start,edit.start);Assert.AreEqual(end,edit.end);Assert.AreEqual(value,edit.value);
                 for(int i=0;i<locals.Length;i++) if(controls[i]!=root) Assert.AreEqual(locals[i],controls[i].localPosition,controls[i].name);

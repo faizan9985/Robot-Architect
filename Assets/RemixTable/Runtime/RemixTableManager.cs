@@ -14,6 +14,7 @@ namespace RemixTable
         public Camera workspaceCamera;
         public PlaybackClock clock = new PlaybackClock();
         public AutomationStore automation = new AutomationStore();
+        public readonly RemixEditHistory history = new RemixEditHistory();
         public bool anchored;
         public TimelineZoom zoom = new TimelineZoom();
         public Canvas palmMenuCanvas;
@@ -25,6 +26,8 @@ namespace RemixTable
         TrackingOriginModeFlags lastOriginMode;
         int lastRecenterCount;
         public bool WorkspaceAligning => alignmentPending;
+        public RemixSpeedSelector speedSelector;
+        public RemixNavigationToolbar navigationToolbar;
         public bool IsEditing
         {
             get
@@ -51,7 +54,7 @@ namespace RemixTable
         }
         void ChangeSong(SongMetadata song)
         {
-            interactions.Cancel(); clock.Reset(song.duration);
+            interactions.Cancel(); history.Clear(); clock.Reset(song.duration);
             foreach (var r in ribbons) r.ResetPhase();
             if (audioManager != null) audioManager.Load(song);
         }
@@ -161,4 +164,3 @@ namespace RemixTable
         static bool Finite(Vector3 value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 }
-

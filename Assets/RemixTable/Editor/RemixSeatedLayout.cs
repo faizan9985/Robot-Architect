@@ -135,42 +135,8 @@ namespace RemixTable.Editor
             EditorUtility.SetDirty(d);EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();Validate();
         }
-        [MenuItem("Tools/Remix Table/Apply Timeline Zoom (existing scene)")]
-        public static void ApplyZoom()
-        {
-            var scene=EditorSceneManager.OpenScene(RemixSceneBuilder.ScenePath);
-            var manager=RemixSceneBuilder.All<RemixTableManager>(scene).Single();
-            var transport=RemixSceneBuilder.All<RemixTransport>(scene).Single();
-            var menu=RemixSceneBuilder.All<HandMenuController>(scene).Single();
-            var data=new SerializedObject(menu);
-            var canvas=(Canvas)data.FindProperty("menuCanvas").objectReferenceValue;
-            manager.palmMenuCanvas=canvas;
-            var panel=(RectTransform)canvas.transform.Find("Panel");
-            var font=transport.palmInstructions.font;
-            var ui=transport.GetComponent<TimelineZoomUI>();if(ui==null)ui=transport.gameObject.AddComponent<TimelineZoomUI>();
-            ui.manager=manager;ui.instructions=transport.palmInstructions.gameObject;
-            transport.palmInstructions.text=RemixTransport.Guidance;
-            // Reuse the instructions area as an expandable section; the menu keeps its original size.
-            var guidance=(RectTransform)transport.palmInstructions.transform;
-            guidance.anchoredPosition=new Vector2(0,-96);guidance.sizeDelta=new Vector2(316,126);
-            ui.expand=Button(panel,"TimelineZoom","TIMELINE ZOOM  +",0,316,font,ui.ToggleOptions);
-            var header=(RectTransform)ui.expand.transform;header.anchoredPosition=new Vector2(0,-8);header.sizeDelta=new Vector2(316,36);
-            ui.menuRange=ui.expand.GetComponentInChildren<TMP_Text>();ui.menuRange.fontSize=12;
-            ((RectTransform)ui.menuRange.transform).sizeDelta=new Vector2(308,34);ui.menuRange.text="TIMELINE ZOOM  +\n8s visible";
-            var options=Rect(panel,"TimelineZoomOptions",Vector2.zero,new Vector2(360,430));ui.options=options.gameObject;
-            ui.detail=Button(options,"Detail","Detail (4s)",-80,148,font,ui.Detail);
-            ui.normal=Button(options,"Normal","Normal (8s)",80,148,font,ui.Normal);
-            ui.wide=Button(options,"Wide","Wide (16s)",-80,148,font,ui.Wide);
-            ui.overview=Button(options,"Overview","Overview (32s)",80,148,font,ui.Overview);
-            foreach(var button in new[]{ui.detail,ui.normal}) ((RectTransform)button.transform).anchoredPosition=new Vector2(((RectTransform)button.transform).anchoredPosition.x,-62);
-            foreach(var button in new[]{ui.wide,ui.overview}) ((RectTransform)button.transform).anchoredPosition=new Vector2(((RectTransform)button.transform).anchoredPosition.x,-119);
-            foreach(var button in new[]{ui.detail,ui.normal,ui.wide,ui.overview}) button.GetComponentInChildren<TMP_Text>().fontSize=14;
-            ui.options.SetActive(false);ui.instructions.SetActive(true);
-            var title=(RectTransform)transport.songTitle.transform;title.anchoredPosition=new Vector2(-175,30);title.sizeDelta=new Vector2(300,26);
-            ui.workspaceRange=Text(transport.transform,"TimelineZoomRange","8s visible",new Vector2(58,30),new Vector2(150,26),11,font);
-            EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();
-            Validate();ValidateZoom();
-        }
+        [MenuItem("Tools/Remix Table/Apply Toolbar Timeline Zoom")]
+        public static void ApplyZoom() => RemixSpeedLayout.Apply();
         public static void ValidateZoom()
         {
             var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
@@ -178,7 +144,7 @@ namespace RemixTable.Editor
             RemixSceneBuilder.Require(ui.manager.palmMenuCanvas!=null && ui.manager.zoom.VisibleSeconds==8,"shared Normal default and original palm canvas");
             foreach(var button in new[]{ui.expand,ui.detail,ui.normal,ui.wide,ui.overview})
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount()==1 && button.onClick.GetPersistentTarget(0)==ui,"zoom button binding "+button.name);
-            RemixSceneBuilder.Require(ui.expand.GetComponentInParent<Canvas>(true)==ui.manager.palmMenuCanvas && ui.workspaceRange.GetComponentInParent<RemixTransport>()!=null,"zoom feedback uses existing canvases");
+            RemixSceneBuilder.Require(ui.toolbar!=null && ui.expand.GetComponentInParent<Canvas>(true)==ui.toolbar.GetComponent<Canvas>() && ui.workspaceRange.GetComponentInParent<RemixTransport>()!=null,"zoom feedback uses navigation and transport canvases");
             Debug.Log("REMIX_ZOOM_VALIDATION_PASS");
         }
         public static void Validate()

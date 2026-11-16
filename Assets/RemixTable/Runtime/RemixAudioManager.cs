@@ -15,6 +15,24 @@ namespace RemixTable
         readonly HashSet<Behaviour> editingOwners = new HashSet<Behaviour>();
         public int EditingPauseCount => editingOwners.Count;
         public bool IsManuallyPaused => manualPaused;
+        float playbackSpeed=1;
+        public float PlaybackSpeed => playbackSpeed;
+        public const int SpeedPresetCount=8;
+        public static float SpeedPreset(int index) => (Mathf.Clamp(index,0,SpeedPresetCount-1)+1)*.25f;
+        public bool SetPlaybackSpeed(float speed)
+        {
+            if(float.IsNaN(speed) || float.IsInfinity(speed) || speed<.25f || speed>2 ||
+                !Mathf.Approximately(speed*4,Mathf.Round(speed*4))) return false;
+            if(Mathf.Approximately(speed,playbackSpeed)) return true;
+            double now=AudioSettings.dspTime;
+            // Rebase song time at this DSP instant. Never advance a scheduled start early or seek
+            // a playing source: all four pitches change together on the next audio mix update.
+            if(running && now>=origin) { offset=Position(now);origin=now; }
+            playbackSpeed=speed;
+            if(sources!=null) foreach(var source in sources) if(source!=null) source.pitch=speed;
+            if(manager!=null && Ready) manager.clock.elapsed=Position(now);
+            return true;
+        }
         // EDIT (default): holding a ribbon pauses the song while you shape it.
         // LIVE: playback keeps running while you edit, so changes are heard as the song plays.
         [SerializeField] bool liveMode;
@@ -90,7 +108,7 @@ namespace RemixTable
                 sources[i].playOnAwake = false;
                 sources[i].loop = true;
                 sources[i].spatialBlend = 0;
-                sources[i].pitch = 1;
+                sources[i].pitch = playbackSpeed;
                 sources[i].volume = SafeHeadroom;
             }
             manager.clock.Reset((float)((double)first.samples / first.frequency));
@@ -132,7 +150,7 @@ namespace RemixTable
             running = true;
             manager.clock.playing = true;
         }
-        double Position(double dsp) => offset + (running ? Math.Max(0, dsp - origin) : 0);
+        double Position(double dsp) => offset + (running ? Math.Max(0, dsp - origin)*playbackSpeed : 0);
         public void Stop()
         {
             if (sources != null) foreach (var source in sources) if (source != null) { source.Stop(); source.clip = null; }
