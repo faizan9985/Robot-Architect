@@ -10,6 +10,7 @@ namespace RemixTable
         public float regionStart, regionEnd;
         public double visualTime;
         Mesh mesh;
+        VocalsHologram hologram;
         Vector3[] vertices;
         Color[] colors;
         Vector4[] edgeData;
@@ -59,6 +60,11 @@ namespace RemixTable
             mesh.vertices = vertices; mesh.triangles = triangles; mesh.uv=uv;
             mesh.bounds = new Bounds(new Vector3(0,0,-manager.design.Radius), new Vector3(4,2,4));
             GetComponent<MeshFilter>().sharedMesh = mesh;
+            if(stem==StemId.Vocals)
+            {
+                hologram=gameObject.AddComponent<VocalsHologram>();
+                hologram.Initialize(mesh, manager.design);
+            }
         }
         public float Timestamp(float localX) => manager.design.curvedTimeline ? manager.zoom.Timestamp(localX,visualTime,manager.clock.duration,manager.design) : Mathf.Repeat((float)(visualTime % manager.clock.duration) + manager.design.TimeOffset(localX), manager.clock.duration);
         public Vector3 SurfacePoint(float coordinate) => transform.TransformPoint(manager.design.ArcPoint(coordinate,HeightAt(coordinate)));
@@ -137,7 +143,7 @@ namespace RemixTable
                 int v=i*2;
                 vertices[v]=d.ArcPoint(x,outerLow); vertices[v+1]=d.ArcPoint(x,outerHigh);
                 float height=Mathf.Max(.00001f,outerHigh-outerLow);
-                edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,0);
+                edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,stem==StemId.Vocals?height:0);
                 Color c=effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 // Pitch: shifted-up parts lean warm, shifted-down parts lean cool.
@@ -155,6 +161,7 @@ namespace RemixTable
             mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
             mesh.SetColors(colors);
             mesh.SetUVs(1,edgeData);
+            if(hologram!=null) hologram.UpdateGeometry(vertices,colors);
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }

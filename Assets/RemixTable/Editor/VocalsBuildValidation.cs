@@ -1,0 +1,48 @@
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.Build.Profile;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+namespace RemixTable.Editor
+{
+    public static class VocalsBuildValidation
+    {
+        public static void Preview()
+        {
+            Validate();
+            RibbonVisualValidation.Preview();
+        }
+        public static void Validate()
+        {
+            EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
+            RibbonVisualValidation.Validate();
+            foreach(string path in new[]{VocalsHologram.BodyPath,VocalsHologram.HaloPath})
+            {
+                var material=Resources.Load<Material>(path);
+                if(material==null || ShaderUtil.ShaderHasError(material.shader)) throw new BuildFailedException("Vocals shader/material invalid");
+            }
+            Debug.Log("VOCALS_SCENE_SHADER_VALIDATION_PASS");
+        }
+        public static void Build()
+        {
+            Validate();
+            var profile=AssetDatabase.LoadAssetAtPath<BuildProfile>("Assets/Settings/Build Profiles/Meta Quest.asset");
+            if(profile==null) throw new BuildFailedException("Existing Quest profile missing");
+            BuildProfile.SetActiveBuildProfile(profile);
+            Directory.CreateDirectory("Builds");
+            var report=BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions {
+                buildProfile=profile,locationPathName="Builds/RemixTable-VocalsHolographic.apk",options=BuildOptions.DetailedBuildReport });
+            if(report.summary.result!=BuildResult.Succeeded) throw new BuildFailedException("Quest APK build failed");
+            var packed=report.packedAssets.SelectMany(a=>a.contents).Select(a=>a.sourceAssetPath).ToArray();
+            foreach(string path in new[]{"Assets/Resources/VocalsHolographicBody.mat",
+                "Assets/Resources/VocalsHolographicHalo.mat","Assets/RemixTable/Shaders/VocalsHolographic.shader"})
+                if(!packed.Contains(path)) throw new BuildFailedException("Vocals asset missing from player: "+path);
+            File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic")));
+            Debug.Log("VOCALS_PACKED_ASSET_VALIDATION_PASS");
+            Debug.Log("VOCALS_QUEST_BUILD_PASS bytes="+report.summary.totalSize);
+        }
+    }
+}
