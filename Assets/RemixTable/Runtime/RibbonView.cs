@@ -14,6 +14,7 @@ namespace RemixTable
         Vector3[] vertices;
         Color[] colors;
         Vector4[] edgeData;
+        Vector4[] vocalsAutomation;
         WaveformCache.Envelope[] rawEnvelope, smoothEnvelope;
         int columns;
         public const int CurveSubdivisions=4;
@@ -62,6 +63,7 @@ namespace RemixTable
             GetComponent<MeshFilter>().sharedMesh = mesh;
             if(stem==StemId.Vocals)
             {
+                vocalsAutomation=new Vector4[vertices.Length];
                 hologram=gameObject.AddComponent<VocalsHologram>();
                 hologram.Initialize(mesh, manager.design);
             }
@@ -144,11 +146,12 @@ namespace RemixTable
                 vertices[v]=d.ArcPoint(x,outerLow); vertices[v+1]=d.ArcPoint(x,outerHigh);
                 float height=Mathf.Max(.00001f,outerHigh-outerLow);
                 edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,stem==StemId.Vocals?height:0);
-                Color c=effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
+                Color c=stem==StemId.Vocals ? d.colors[(int)stem] : effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
                 // Pitch: shifted-up parts lean warm, shifted-down parts lean cool.
                 float semitones=manager.automation.Evaluate(song.id,stem,ParameterType.Pitch,t,manager.clock.duration);
-                if(semitones!=0) c=Color.Lerp(c,semitones>0?new Color(1,.85f,.3f):new Color(.35f,.45f,1),Mathf.Clamp01(Mathf.Abs(semitones)/12f)*.6f+.15f);
+                if(stem!=StemId.Vocals && semitones!=0) c=Color.Lerp(c,semitones>0?new Color(1,.85f,.3f):new Color(.35f,.45f,1),Mathf.Clamp01(Mathf.Abs(semitones)/12f)*.6f+.15f);
+                if(vocalsAutomation!=null) vocalsAutomation[v]=vocalsAutomation[v+1]=VocalsHologram.EncodeAutomation(effect,semitones);
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
                 // SNAP shows the beat grid as thin bright lines (brighter on each bar's first beat).
                 if(snapGrid && BeatGrid.OnBeat(t,song.bpm,song.beatOffset,beatTolerance,out bool bar)) c*=bar?2.2f:1.5f;
@@ -161,7 +164,7 @@ namespace RemixTable
             mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
             mesh.SetColors(colors);
             mesh.SetUVs(1,edgeData);
-            if(hologram!=null) hologram.UpdateGeometry(vertices,colors);
+            if(hologram!=null) hologram.UpdateGeometry(vertices,colors,vocalsAutomation);
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }

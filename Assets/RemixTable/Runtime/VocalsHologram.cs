@@ -13,6 +13,7 @@ namespace RemixTable
         Mesh sourceMesh, shell, halo;
         Vector3[] shellVertices, haloVertices;
         Color[] bodyColors, shellColors, haloColors;
+        Vector4[] derivedAutomation;
         RemixDesign design;
         public void Initialize(Mesh source, RemixDesign settings)
         {
@@ -26,6 +27,7 @@ namespace RemixTable
             shellVertices=new Vector3[pairs*4];haloVertices=new Vector3[pairs*4];
             shellColors=new Color[pairs*4];haloColors=new Color[pairs*4];
             bodyColors=new Color[source.vertexCount];
+            derivedAutomation=new Vector4[pairs*4];
             var uv=new Vector2[pairs*4];
             var sides=new int[(pairs-1)*18];var fringe=new int[(pairs-1)*12];
             for(int i=0;i<pairs;i++)
@@ -58,7 +60,17 @@ namespace RemixTable
             mesh.bounds=new Bounds(new Vector3(0,0,-design.Radius),new Vector3(4,2,4));
             child.GetComponent<MeshFilter>().sharedMesh=mesh;return mesh;
         }
-        public void UpdateGeometry(Vector3[] points,Color[] colors)
+        // UV2: signed filter, semitones, harmonic lines/meter, line strength.
+        // Zero automation encodes exactly zero, preserving the existing shader appearance.
+        public static Vector4 EncodeAutomation(float filter,float semitones)
+        {
+            filter=StemFilter.SafeEffect(filter);
+            if(float.IsNaN(semitones) || float.IsInfinity(semitones)) semitones=0;
+            semitones=Mathf.Clamp(semitones,-PitchShiftDsp.MaxSemitones,PitchShiftDsp.MaxSemitones);
+            if(semitones==0) return new Vector4(filter,0,0,0);
+            return new Vector4(filter,semitones,250*Mathf.Pow(2,semitones/12),Mathf.Sqrt(Mathf.Abs(semitones)/12));
+        }
+        public void UpdateGeometry(Vector3[] points,Color[] colors,Vector4[] automation=null)
         {
             float reference=Mathf.Max(.001f,design.colors[(int)StemId.Vocals].maxColorComponent*design.emission);
             for(int i=0;i<points.Length/2;i++)
@@ -77,12 +89,19 @@ namespace RemixTable
                 {
                     shellColors[v+j]=new Color(level*.48f,level*.48f,level*.48f,1);
                     haloColors[v+j]=new Color(level,level,level,1);
+                    if(automation!=null) derivedAutomation[v+j]=automation[s];
                 }
             }
             shell.SetVertices(shellVertices,0,shellVertices.Length,MeshUpdateFlags.DontRecalculateBounds);shell.SetColors(shellColors);
             halo.SetVertices(haloVertices,0,haloVertices.Length,MeshUpdateFlags.DontRecalculateBounds);halo.SetColors(haloColors);
             // The original mesh's vertex positions, UVs and indices remain untouched.
             sourceMesh.SetColors(bodyColors);
+            if(automation!=null)
+            {
+                sourceMesh.SetUVs(2,automation);
+                shell.SetUVs(2,derivedAutomation);
+                halo.SetUVs(2,derivedAutomation);
+            }
         }
         void OnDestroy()
         {
