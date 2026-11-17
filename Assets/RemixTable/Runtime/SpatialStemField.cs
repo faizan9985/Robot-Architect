@@ -5,7 +5,7 @@ namespace RemixTable
 {
     // SPATIAL mode: one glowing orb per stem placed around the listener. Grab an orb (near or far, hands or
     // controllers) and move it: that stem's sound follows it left / right and gets quieter as it moves away.
-    // Orbs pulse with their stem's level and dim when the stem is muted. Positions are saved with the remix.
+    // Holographic visuals observe XRI state; positions and audio remain owned by the existing spatial path.
     public sealed class SpatialStemField : MonoBehaviour
     {
         public RemixTableManager manager;
@@ -13,13 +13,13 @@ namespace RemixTable
         public XRGrabInteractable[] orbs = new XRGrabInteractable[4];
         public Renderer[] orbRenderers = new Renderer[4];
         [Min(.01f)] public float orbDiameter = .09f;
-        [Range(0, 1)] public float pulse = .45f;
+        [HideInInspector] public float pulse = .45f; // Retained serialized field; physical-scale pulsing is retired.
         readonly bool[] held = new bool[4];
-        MaterialPropertyBlock block;
-        static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), LegacyColor = Shader.PropertyToID("_Color");
+        readonly SpatialOrbHologram[] visuals = new SpatialOrbHologram[4];
         bool shown;
         void OnEnable()
         {
+            InitializeVisuals();
             manager.WorkspaceAlignmentRequested+=CancelGrabs;
             for (int i = 0; i < orbs.Length; i++)
             {
@@ -33,6 +33,7 @@ namespace RemixTable
         void OnDisable()
         {
             manager.WorkspaceAlignmentRequested-=CancelGrabs;
+            foreach(var visual in visuals)if(visual!=null)visual.ResetInteraction();
             for (int i = 0; i < orbs.Length; i++)
             {
                 if (orbs[i] == null) continue;
@@ -42,10 +43,21 @@ namespace RemixTable
         }
         void CancelGrabs()
         {
+            foreach(var visual in visuals)if(visual!=null)visual.ResetInteraction();
             for(int i=0;i<orbs.Length;i++) if(orbs[i]!=null && held[i])
             {
                 if(orbs[i].interactionManager!=null) orbs[i].interactionManager.CancelInteractableSelection((IXRSelectInteractable)orbs[i]);
                 if(held[i]) Grab(i,false);
+            }
+        }
+        public void InitializeVisuals()
+        {
+            for(int i=0;i<orbs.Length;i++)
+            {
+                if(orbs[i]==null || orbRenderers[i]==null)continue;
+                var visual=orbs[i].GetComponent<SpatialOrbHologram>();
+                if(visual==null)visual=orbs[i].gameObject.AddComponent<SpatialOrbHologram>();
+                visual.Initialize((StemId)i,orbRenderers[i]);visuals[i]=visual;
             }
         }
         void Grab(int stem, bool grabbing)
@@ -72,7 +84,6 @@ namespace RemixTable
                 }
             }
             if (!spatial || !manager.anchored) return;
-            block ??= new MaterialPropertyBlock();
             for (int i = 0; i < orbs.Length; i++)
             {
                 if (orbs[i] == null) continue;
@@ -81,16 +92,10 @@ namespace RemixTable
                 // Held orbs drive the mix; free orbs follow it (a loaded save or a re-anchored table).
                 if (held[i]) manager.mix.SetPosition(stem, manager.SpatialLocal(t.position));
                 else t.position = manager.SpatialWorld(manager.mix.positions[i]);
-                float level = manager.audioManager != null ? manager.audioManager.Level(stem) : 0;
-                bool audible = manager.mix.Audible(stem);
-                t.localScale = Vector3.one * orbDiameter * (1 + (audible ? level * pulse : 0)) * (held[i] ? 1.15f : 1);
-                if (orbRenderers[i] != null && manager.design != null)
-                {
-                    var color = manager.design.colors[i] * (audible ? 1.4f + level : .25f); color.a = 1;
-                    orbRenderers[i].GetPropertyBlock(block);
-                    block.SetColor(BaseColor, color); block.SetColor(LegacyColor, color);
-                    orbRenderers[i].SetPropertyBlock(block);
-                }
+                if(visuals[i]!=null)
+                    visuals[i].Advance(Time.unscaledDeltaTime,orbs[i].isHovered,orbs[i].isSelected,
+                        manager.mix.Audible(stem),manager.mix.soloed[i],
+                        manager.WorkspaceAligning || !manager.WorkspaceTracked || !orbs[i].isActiveAndEnabled);
             }
         }
     }

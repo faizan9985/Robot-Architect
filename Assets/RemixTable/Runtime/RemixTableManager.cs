@@ -38,6 +38,8 @@ namespace RemixTable
         TrackingOriginModeFlags lastOriginMode;
         int lastRecenterCount;
         public bool WorkspaceAligning => alignmentPending;
+        // Read-only observation for visuals; it does not change tracking or alignment decisions.
+        public bool WorkspaceTracked { get; private set; }
         public event System.Action WorkspaceAlignmentRequested;
         public RemixSpeedSelector speedSelector;
         public RemixNavigationToolbar navigationToolbar;
@@ -175,6 +177,7 @@ namespace RemixTable
         // cameraOffset is local to the XR Origin, never an extra world-space height to add to head.
         public void ProcessWorkspacePose(Pose head,bool tracked,Pose cameraOffset,TrackingOriginModeFlags originMode,int? recenterCount,float deltaTime)
         {
+            WorkspaceTracked=tracked;
             if(hasOriginSample && (originMode!=lastOriginMode || Vector3.Distance(cameraOffset.position,lastOffsetPose.position)>.001f ||
                 Quaternion.Angle(cameraOffset.rotation,lastOffsetPose.rotation)>.1f)) RequestWorkspaceAlignment();
             hasOriginSample=true;lastOffsetPose=cameraOffset;lastOriginMode=originMode;
