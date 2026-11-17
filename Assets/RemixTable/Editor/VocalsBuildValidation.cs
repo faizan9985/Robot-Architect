@@ -19,10 +19,12 @@ namespace RemixTable.Editor
         {
             EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
             RibbonVisualValidation.Validate();
-            foreach(string path in new[]{VocalsHologram.BodyPath,VocalsHologram.HaloPath})
+            foreach(string path in new[]{VocalsHologram.BodyPath,VocalsHologram.HaloPath,VocalsHologram.StemBodyPath,VocalsHologram.StemHaloPath})
             {
                 var material=Resources.Load<Material>(path);
                 if(material==null || ShaderUtil.ShaderHasError(material.shader)) throw new BuildFailedException("Vocals shader/material invalid");
+                foreach(string property in new[]{"_PrimaryLinear","_DeepLinear","_HighlightLinear","_EdgeLinear","_LowpassLinear"})
+                    if(!material.HasProperty(property))throw new BuildFailedException("Shared hologram palette property missing: "+property);
             }
             Debug.Log("VOCALS_SCENE_SHADER_VALIDATION_PASS");
         }
@@ -38,9 +40,10 @@ namespace RemixTable.Editor
             if(report.summary.result!=BuildResult.Succeeded) throw new BuildFailedException("Quest APK build failed");
             var packed=report.packedAssets.SelectMany(a=>a.contents).Select(a=>a.sourceAssetPath).ToArray();
             foreach(string path in new[]{"Assets/Resources/VocalsHolographicBody.mat",
-                "Assets/Resources/VocalsHolographicHalo.mat","Assets/RemixTable/Shaders/VocalsHolographic.shader"})
+                "Assets/Resources/VocalsHolographicHalo.mat","Assets/Resources/StemHolographicBody.mat",
+                "Assets/Resources/StemHolographicHalo.mat","Assets/RemixTable/Shaders/VocalsHolographic.shader"})
                 if(!packed.Contains(path)) throw new BuildFailedException("Vocals asset missing from player: "+path);
-            File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic")));
+            File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic") || p.Contains("StemHolographic")));
             Debug.Log("VOCALS_PACKED_ASSET_VALIDATION_PASS");
             Debug.Log("VOCALS_QUEST_BUILD_PASS bytes="+report.summary.totalSize);
         }

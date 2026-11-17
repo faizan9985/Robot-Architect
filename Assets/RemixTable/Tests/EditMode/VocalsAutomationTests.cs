@@ -8,8 +8,11 @@ using UnityEngine;
 using Object=UnityEngine.Object;
 namespace RemixTable.Tests
 {
+    [TestFixture(StemId.Drums)] [TestFixture(StemId.Bass)] [TestFixture(StemId.Melody)] [TestFixture(StemId.Vocals)]
     public class VocalsAutomationTests
     {
+        readonly StemId target;
+        public VocalsAutomationTests(StemId stem) { target=stem; }
         RemixTableManager manager;
         RibbonView vocals;
         string Song => manager.library.Current.id;
@@ -20,7 +23,7 @@ namespace RemixTable.Tests
             manager.clock.duration=manager.library.Current.duration;manager.clock.elapsed=65;
             foreach(var ribbon in manager.ribbons)
                 typeof(RibbonView).GetMethod("Awake",BindingFlags.NonPublic|BindingFlags.Instance).Invoke(ribbon,null);
-            vocals=manager.ribbons.Single(r=>r.stem==StemId.Vocals);
+            vocals=manager.ribbons.Single(r=>r.stem==target);
             foreach(var ribbon in manager.ribbons) ribbon.UpdateWaveform();
         }
         [TearDown] public void Cleanup()
@@ -28,18 +31,18 @@ namespace RemixTable.Tests
             foreach(var ribbon in manager.ribbons) if(ribbon.WaveformMesh!=null) Object.DestroyImmediate(ribbon.WaveformMesh);
         }
         AutomationEdit Edit(ParameterType parameter,float value,float start=64,float end=66) =>
-            new AutomationEdit{songId=Song,stem=StemId.Vocals,parameter=parameter,value=value,start=start,end=end};
+            new AutomationEdit{songId=Song,stem=target,parameter=parameter,value=value,start=start,end=end};
         static Vector4[] Data(Mesh mesh) { var data=new List<Vector4>();mesh.GetUVs(2,data);return data.ToArray(); }
         void CheckEveryTimestamp()
         {
             vocals.UpdateWaveform();var data=Data(vocals.WaveformMesh);Assert.AreEqual(vocals.WaveformMesh.vertexCount,data.Length);
-            var shell=Data(vocals.transform.Find("Vocals depth").GetComponent<MeshFilter>().sharedMesh);
-            var halo=Data(vocals.transform.Find("Vocals halo").GetComponent<MeshFilter>().sharedMesh);
+            var shell=Data(vocals.GetComponent<VocalsHologram>().DepthMesh);
+            var halo=Data(vocals.GetComponent<VocalsHologram>().HaloMesh);
             for(int i=0;i<=vocals.CurveSegmentCount;i++)
             {
                 float x=(i/(float)vocals.CurveSegmentCount-.5f)*manager.design.width,t=vocals.Timestamp(x);
-                float filter=manager.automation.Evaluate(Song,StemId.Vocals,ParameterType.Effect,t,manager.clock.duration);
-                float pitch=manager.PitchAt(StemId.Vocals,t);
+                float filter=manager.automation.Evaluate(Song,target,ParameterType.Effect,t,manager.clock.duration);
+                float pitch=manager.PitchAt(target,t);
                 Assert.AreEqual(StemFilter.SafeEffect(filter),data[i*2].x,"filter at "+t);
                 Assert.AreEqual(pitch,data[i*2].y,"pitch at "+t);
                 Assert.AreEqual(data[i*2],data[i*2+1]);
@@ -63,12 +66,14 @@ namespace RemixTable.Tests
                 ribbon.UpdateWaveform();Assert.AreSame(materials[(int)ribbon.stem],ribbon.GetComponent<MeshRenderer>().sharedMaterial);
                 if(ribbon==vocals)continue;
                 CollectionAssert.AreEqual(otherVertices[k],ribbon.WaveformMesh.vertices);CollectionAssert.AreEqual(otherColors[k++],ribbon.WaveformMesh.colors);
-                Assert.AreEqual(0,Data(ribbon.WaveformMesh).Length);
+                var otherData=Data(ribbon.WaveformMesh);
+                Assert.AreEqual(ribbon.WaveformMesh.vertexCount,otherData.Length);
+                Assert.IsTrue(otherData.All(v=>v==Vector4.zero),"Target automation must not leak into another hologram");
             }
             manager.automation.Upsert(Edit(ParameterType.Gain,2));vocals.UpdateWaveform();
             var boosted=vocals.WaveformMesh.vertices;
             Assert.IsTrue(vertices.Where((v,i)=>v!=boosted[i]).Any(),"gain still sculpts amplitude");
-            manager.automation.ResetStem(Song,StemId.Vocals);vocals.UpdateWaveform();
+            manager.automation.ResetStem(Song,target);vocals.UpdateWaveform();
             CollectionAssert.AreEqual(vertices,vocals.WaveformMesh.vertices);CollectionAssert.AreEqual(originalColors,vocals.WaveformMesh.colors);
             Assert.IsTrue(Data(vocals.WaveformMesh).All(v=>v==Vector4.zero));
         }

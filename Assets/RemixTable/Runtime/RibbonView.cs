@@ -14,7 +14,7 @@ namespace RemixTable
         Vector3[] vertices;
         Color[] colors;
         Vector4[] edgeData;
-        Vector4[] vocalsAutomation;
+        Vector4[] hologramAutomation;
         WaveformCache.Envelope[] rawEnvelope, smoothEnvelope;
         int columns;
         public const int CurveSubdivisions=4;
@@ -61,12 +61,9 @@ namespace RemixTable
             mesh.vertices = vertices; mesh.triangles = triangles; mesh.uv=uv;
             mesh.bounds = new Bounds(new Vector3(0,0,-manager.design.Radius), new Vector3(4,2,4));
             GetComponent<MeshFilter>().sharedMesh = mesh;
-            if(stem==StemId.Vocals)
-            {
-                vocalsAutomation=new Vector4[vertices.Length];
-                hologram=gameObject.AddComponent<VocalsHologram>();
-                hologram.Initialize(mesh, manager.design);
-            }
+            hologramAutomation=new Vector4[vertices.Length];
+            hologram=gameObject.AddComponent<VocalsHologram>();
+            hologram.Initialize(mesh,manager.design,stem);
         }
         public float Timestamp(float localX) => manager.design.curvedTimeline ? manager.zoom.Timestamp(localX,visualTime,manager.clock.duration,manager.design) : Mathf.Repeat((float)(visualTime % manager.clock.duration) + manager.design.TimeOffset(localX), manager.clock.duration);
         public Vector3 SurfacePoint(float coordinate) => transform.TransformPoint(manager.design.ArcPoint(coordinate,HeightAt(coordinate)));
@@ -145,13 +142,12 @@ namespace RemixTable
                 int v=i*2;
                 vertices[v]=d.ArcPoint(x,outerLow); vertices[v+1]=d.ArcPoint(x,outerHigh);
                 float height=Mathf.Max(.00001f,outerHigh-outerLow);
-                edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,stem==StemId.Vocals?height:0);
-                Color c=stem==StemId.Vocals ? d.colors[(int)stem] : effect<0 ? Color.Lerp(d.colors[(int)stem],d.colors[(int)stem]*.4f,-effect) : Color.Lerp(d.colors[(int)stem],Color.white,effect*.4f);
+                edgeData[v]=edgeData[v+1]=new Vector4((low-outerLow)/height,(high-outerLow)/height,d.waveformGlow,height);
+                Color c=d.colors[(int)stem];
                 c=Color.Lerp(c,Color.white,Mathf.Clamp01(Mathf.Abs(gain-1))*.45f);
-                // Pitch: shifted-up parts lean warm, shifted-down parts lean cool.
+                // All stems use shared shader effects instead of legacy filter/pitch tinting.
                 float semitones=manager.automation.Evaluate(song.id,stem,ParameterType.Pitch,t,manager.clock.duration);
-                if(stem!=StemId.Vocals && semitones!=0) c=Color.Lerp(c,semitones>0?new Color(1,.85f,.3f):new Color(.35f,.45f,1),Mathf.Clamp01(Mathf.Abs(semitones)/12f)*.6f+.15f);
-                if(vocalsAutomation!=null) vocalsAutomation[v]=vocalsAutomation[v+1]=VocalsHologram.EncodeAutomation(effect,semitones);
+                hologramAutomation[v]=hologramAutomation[v+1]=VocalsHologram.EncodeAutomation(effect,semitones);
                 c*=d.emission*(selected && InRegion(t)?d.highlight:1);
                 // SNAP shows the beat grid as thin bright lines (brighter on each bar's first beat).
                 if(snapGrid && BeatGrid.OnBeat(t,song.bpm,song.beatOffset,beatTolerance,out bool bar)) c*=bar?2.2f:1.5f;
@@ -164,7 +160,7 @@ namespace RemixTable
             mesh.SetVertices(vertices,0,vertices.Length,UnityEngine.Rendering.MeshUpdateFlags.DontRecalculateBounds);
             mesh.SetColors(colors);
             mesh.SetUVs(1,edgeData);
-            if(hologram!=null) hologram.UpdateGeometry(vertices,colors,vocalsAutomation);
+            if(hologram!=null) hologram.UpdateGeometry(vertices,colors,hologramAutomation);
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }

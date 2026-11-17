@@ -38,8 +38,10 @@ namespace RemixTable.Tests
                 manager.zoom.Request(i%2==0?4:32);yield return new WaitForSecondsRealtime(.15f);Check(vocals);
                 foreach(var other in manager.ribbons.Where(r=>r!=vocals))
                 {
-                    Assert.IsNull(other.GetComponent<VocalsHologram>());
-                    Assert.AreSame(manager.design.ribbonMaterial,other.GetComponent<MeshRenderer>().sharedMaterial);
+                    Assert.AreEqual(other.stem,other.GetComponent<VocalsHologram>().Stem);
+                    Assert.AreSame(Resources.Load<Material>(VocalsHologram.BodyFor(other.stem)),other.GetComponent<MeshRenderer>().sharedMaterial);
+                    var otherState=new List<Vector4>();other.WaveformMesh.GetUVs(2,otherState);
+                    Assert.IsTrue(otherState.All(v=>v==Vector4.zero),"Vocals edits do not affect other stem automation");
                 }
             }
             Assert.IsTrue(audio.SetLoop(.3f,1.4f));

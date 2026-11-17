@@ -3,24 +3,35 @@ using UnityEngine.Rendering;
 
 namespace RemixTable
 {
-    // Visual-only derivatives of the final filled mesh. Never samples audio or adds colliders.
+    // Shared per-stem renderer. Retains its original type/GUID for compatibility.
+    // Visual-only derivatives of the final filled mesh; no audio sampling or colliders.
     [DisallowMultipleComponent]
     public sealed class VocalsHologram : MonoBehaviour
     {
         public const string BodyPath = "VocalsHolographicBody";
         public const string HaloPath = "VocalsHolographicHalo";
+        public const string StemBodyPath = "StemHolographicBody", StemHaloPath = "StemHolographicHalo";
+        public static string BodyFor(StemId id) => id==StemId.Vocals?BodyPath:StemBodyPath;
+        public static string HaloFor(StemId id) => id==StemId.Vocals?HaloPath:StemHaloPath;
         public const float Depth = .003f, HaloWidth = .006f;
         Mesh sourceMesh, shell, halo;
         Vector3[] shellVertices, haloVertices;
         Color[] bodyColors, shellColors, haloColors;
         Vector4[] derivedAutomation;
         RemixDesign design;
-        public void Initialize(Mesh source, RemixDesign settings)
+        StemId stem;
+        public StemId Stem => stem;
+        public Mesh DepthMesh => shell;
+        public Mesh HaloMesh => halo;
+        public static string DepthName(StemId id) => (id==StemId.Melody?"Other":id.ToString())+" depth";
+        public static string HaloName(StemId id) => (id==StemId.Melody?"Other":id.ToString())+" halo";
+        public void Initialize(Mesh source, RemixDesign settings,StemId id=StemId.Vocals)
         {
             design=settings;
+            stem=id;
             sourceMesh=source;
-            var body=Resources.Load<Material>(BodyPath);
-            var glow=Resources.Load<Material>(HaloPath);
+            var body=Resources.Load<Material>(BodyFor(stem));
+            var glow=Resources.Load<Material>(HaloFor(stem));
             if(body==null || glow==null) throw new System.InvalidOperationException("Vocals hologram materials missing");
             GetComponent<MeshRenderer>().sharedMaterial=body;
             int pairs=source.vertexCount/2;
@@ -42,8 +53,15 @@ namespace RemixTable
                 Quad(fringe,i*12,v,v+1,v+4,v+5);
                 Quad(fringe,i*12+6,v+2,v+3,v+6,v+7);
             }
-            shell=CreateVisual("Vocals depth",shellVertices,uv,sides,body);
-            halo=CreateVisual("Vocals halo",haloVertices,uv,fringe,glow);
+            shell=CreateVisual(DepthName(stem),shellVertices,uv,sides,body);
+            halo=CreateVisual(HaloName(stem),haloVertices,uv,fringe,glow);
+            if(stem!=StemId.Vocals)
+            {
+                var block=new MaterialPropertyBlock();StemHologramPalette.For(stem).Apply(block);
+                GetComponent<MeshRenderer>().SetPropertyBlock(block);
+                transform.Find(DepthName(stem)).GetComponent<MeshRenderer>().SetPropertyBlock(block);
+                transform.Find(HaloName(stem)).GetComponent<MeshRenderer>().SetPropertyBlock(block);
+            }
         }
         static void Quad(int[] triangles,int k,int a,int b,int c,int d)
         {
@@ -72,7 +90,7 @@ namespace RemixTable
         }
         public void UpdateGeometry(Vector3[] points,Color[] colors,Vector4[] automation=null)
         {
-            float reference=Mathf.Max(.001f,design.colors[(int)StemId.Vocals].maxColorComponent*design.emission);
+            float reference=Mathf.Max(.001f,design.colors[(int)stem].maxColorComponent*design.emission);
             for(int i=0;i<points.Length/2;i++)
             {
                 int s=i*2,v=i*4;

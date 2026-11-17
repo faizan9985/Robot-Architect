@@ -20,8 +20,9 @@ namespace RemixTable.Tests
             Assert.AreSame(original,vocals.GetComponent<MeshRenderer>().sharedMaterial);
             foreach(var ribbon in manager.ribbons.Where(r=>r.stem!=StemId.Vocals))
             {
-                Assert.AreSame(manager.design.ribbonMaterial,ribbon.GetComponent<MeshRenderer>().sharedMaterial);
-                Assert.IsNull(ribbon.GetComponent<VocalsHologram>());
+                Assert.AreSame(Resources.Load<Material>(VocalsHologram.BodyFor(ribbon.stem)),ribbon.GetComponent<MeshRenderer>().sharedMaterial);
+                Assert.AreEqual(ribbon.stem,ribbon.GetComponent<VocalsHologram>().Stem);
+                Assert.AreEqual(0,ribbon.transform.Find(VocalsHologram.DepthName(ribbon.stem)).GetComponents<Collider>().Length);
             }
             int colliderCount=vocals.GetComponentsInChildren<Collider>(true).Length;
             foreach(float zoom in new[]{4,16,32})
