@@ -10,7 +10,7 @@ namespace RemixTable
         public TMP_Text songTitle, playbackTime, playPauseLabel;
         public TMP_Text workspaceInstructions;
         public const string Guidance="PICK VOLUME, FILTER OR PITCH BELOW\nPINCH + MOVE UP / DOWN\nFILTER: UP THIN, DOWN MUFFLED\nTWO HANDS / REGION\nHOLD ENDPOINT / WHOLE STEM\nEMPTY SPACE / SPREAD TO ZOOM";
-        public const string WorkspaceGuidance=Guidance+"\nTWO HANDS ON PLAYHEAD / HEIGHT\nGRAB VIOLET FRAME / MOVE WORKSPACE";
+        public const string WorkspaceGuidance=Guidance+"\nTWO HANDS ON PLAYHEAD / HEIGHT\nDRAG RECENTER / MOVE WORKSPACE";
         public RemixToolbox toolbox; // Optional: its short feedback messages replace the clock briefly.
         public static string GestureLabel(int? volumePercent,int? filterPercent,int? semitones)
         {

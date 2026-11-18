@@ -70,7 +70,7 @@ namespace RemixTable.Tests
                 var bounds=rows[i].InteractionBounds;bounds.center=rows[i].transform.localPosition;
                 for(int j=i+1;j<4;j++){var other=rows[j].InteractionBounds;other.center=rows[j].transform.localPosition;Assert.IsFalse(bounds.Intersects(other));}
             }
-            CollectionAssert.AreEquivalent(manager.workspaceInteraction.borderColliders,manager.workspace.GetComponentsInChildren<Collider>());
+            Assert.IsEmpty(manager.workspace.GetComponentsInChildren<Collider>());
             Assert.IsEmpty(manager.workspaceInteraction.waveformRoot.GetComponentsInChildren<Collider>(),"waveform hit regions remain analytical");
             Assert.IsEmpty(manager.workspace.GetComponentsInChildren<ScrollRect>());
         }

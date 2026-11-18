@@ -87,23 +87,28 @@ namespace RemixTable.Tests
             Assert.That(Vector3.Distance(manager.workspace.position,seated.position+seated.rotation*new Vector3(.2f,.1f,-.15f)),Is.LessThan(.0001));Assert.AreEqual(.5f,control.Height,.0001);
             manager.RecenterWorkspace();Align(pose,1);Assert.That(Vector3.Distance(manager.workspace.position,seated.position),Is.LessThan(.0001));Assert.That(Quaternion.Angle(manager.workspace.rotation,seated.rotation),Is.LessThan(.0001));Assert.AreEqual(1,control.VerticalScale,.0001);
         }
-        [Test] public void NavFrameHasOnlyFourBorderTargetsAndAnimatedExpansionNeverCoversButtons()
+        [Test] public void NavigationHasNoGrabBorderAndAnimationPreservesRecenterTarget()
         {
-            var nav=manager.navigationToolbar;nav.ResetClosed();control.UpdateFrame();var small=control.handleRect.rect.width;
-            nav.speed.SetOpen(true);nav.AdvanceAnimation(1);control.UpdateFrame();Assert.Greater(control.handleRect.rect.width,small);
-            foreach(var button in new[]{nav.GetComponent<RemixHistoryControls>().undoButton,nav.GetComponent<RemixHistoryControls>().redoButton,nav.speed.speedButton,nav.zoom.expand})
-            {
-                var rect=(RectTransform)button.transform;var corners=new Vector3[4];rect.GetWorldCorners(corners);
-                foreach(var corner in corners)foreach(var collider in control.borderColliders)
-                {
-                    var local=collider.transform.InverseTransformPoint(corner);Assert.IsFalse(new Bounds(collider.center,collider.size).Contains(local),"frame cannot capture a button corner");
-                }
-            }
-            Assert.IsFalse(control.navigationHandle.trackPosition);Assert.IsFalse(control.navigationHandle.trackRotation);Assert.AreEqual(4,control.navigationHandle.colliders.Count);Assert.AreEqual(1,control.navigationHandle.GetComponents<Rigidbody>().Length);
-            Assert.AreEqual(0,control.navigationHandle.gameObject.layer,"frame must be visible to the existing near-hand Default-layer sphere casts");
-            var casters=Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include,FindObjectsSortMode.None).Where(c=>c.GetType().Name=="SphereInteractionCaster").ToArray();Assert.GreaterOrEqual(casters.Length,2);
-            foreach(var caster in casters)Assert.AreNotEqual(0,new SerializedObject(caster).FindProperty("m_PhysicsLayerMask").intValue & (1<<control.navigationHandle.gameObject.layer));
-            Physics.SyncTransforms();var hits=new Collider[16];var target=control.borderColliders[0];int count=Physics.OverlapBoxNonAlloc(target.bounds.center,Vector3.one*.001f,hits,Quaternion.identity,1<<target.gameObject.layer);Assert.IsTrue(hits.Take(count).Contains(target));
+            var nav=manager.navigationToolbar;nav.ResetClosed();float width=nav.background.rect.width;
+            var rect=(RectTransform)control.recenterControl.transform;Assert.AreEqual(new Vector2(80,50),rect.sizeDelta);
+            Assert.IsNull(nav.background.Find("Grab Border"));Assert.IsEmpty(nav.GetComponentsInChildren<Collider>(true));Assert.IsEmpty(nav.GetComponentsInChildren<Rigidbody>(true));
+            nav.speed.SetOpen(true);nav.AdvanceAnimation(1);Assert.Greater(nav.background.rect.width,width);Assert.AreEqual(new Vector2(80,50),rect.sizeDelta);
+            Assert.IsTrue(control.recenterControl.button.targetGraphic.raycastTarget);Assert.AreEqual(1,control.recenterControl.button.onClick.GetPersistentEventCount());
+            Assert.AreSame(control.recenterControl,control.recenterControl.button.onClick.GetPersistentTarget(0));Assert.AreEqual("Click",control.recenterControl.button.onClick.GetPersistentMethodName(0));
+        }
+        [Test] public void TapThresholdAndStickyDragPreserveScaleAndNeverRecenterAfterReturningToStart()
+        {
+            var start=manager.workspace.position;control.SetHeight(.5f);Assert.IsTrue(control.BeginMove(Vector3.zero));
+            control.UpdateMove(Vector3.right*(control.movementThreshold*.8f),1);Assert.IsFalse(control.HasDragged);Assert.AreEqual(start,manager.workspace.position);
+            control.FinishMove(.15f,true);Assert.AreEqual(1,control.VerticalScale);Assert.IsTrue(manager.WorkspaceAligning);Align(Head);
+            control.SetHeight(.5f);Assert.IsTrue(control.BeginMove(Vector3.zero));control.UpdateMove(new Vector3(.08f,.03f,-.04f),1);Assert.IsTrue(control.HasDragged);Assert.AreEqual(.5f,control.Height,.0001);
+            control.UpdateMove(Vector3.zero,1);control.FinishMove(.2f,true);Assert.IsFalse(manager.WorkspaceAligning);Assert.AreEqual(.5f,control.Height,.0001);Assert.IsFalse(manager.ExternalHold);
+        }
+        [Test] public void LongPressCancellationAndCompetingScaleNeverBecomeTaps()
+        {
+            control.SetHeight(.5f);Assert.IsTrue(control.BeginMove(Vector3.zero));control.FinishMove(control.maximumTapDuration+.1f,true);Assert.IsFalse(manager.WorkspaceAligning);Assert.AreEqual(.5f,control.Height,.0001);
+            Assert.IsTrue(control.BeginMove(Vector3.zero));control.FinishMove(.1f,false);Assert.IsFalse(manager.WorkspaceAligning);Assert.AreEqual(.5f,control.Height,.0001);
+            gestures.ProcessHands(Hand(-.07f,false),Hand(.07f,false),.016f);Begin();Assert.AreEqual(RemixWorkspaceInteraction.Ownership.VerticalScale,control.State);Assert.IsFalse(control.BeginMove(Vector3.zero));
         }
         [Test] public void ManualMovementIncludesSpheresAndEveryCanvasWithoutChangingOrientationOrMixCoordinates()
         {

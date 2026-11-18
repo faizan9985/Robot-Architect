@@ -1,5 +1,11 @@
 # Session-only spatial workspace controls
 
+The navigation-frame grab described in this milestone has been replaced by the
+existing Recenter button: short tap to recenter, pinch-and-drag to move. See
+[RECENTER_DRAG.md](RECENTER_DRAG.md) for the current interaction and validation.
+The original implementation and validation inventory below records this earlier
+milestone; playhead scaling and session placement remain in use.
+
 The Remix Table scene uses `RemixWorkspaceInteraction` on the existing manager.
 `RemixWorkspaceRoot` remains the placement authority. Its `RibbonViewport` child
 contains the four lanes and the fixed playback indicator; only that child's Y

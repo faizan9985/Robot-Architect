@@ -50,7 +50,7 @@ namespace RemixTable
                 case "RoomTool":iconKey="Room";semanticName="Passthrough";break;
                 case "MicTool":iconKey="Voice";semanticName="Voice";break;
                 case "ResetTool":iconKey="Reset";semanticName="Reset All (Undo restores)";break;
-                case "RecenterTool":iconKey="Recenter";semanticName="Recenter workspace";break;
+                case "RecenterTool":iconKey="Recenter";semanticName="Recenter / Drag to move";break;
                 case "MasterVolumeTool":iconKey="Volume";semanticName="Master Volume / Help";break;
                 case "Undo":case "Redo":iconKey=role;break;
                 case "Speed":semanticName="Playback speed";break;

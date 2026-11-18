@@ -58,30 +58,22 @@ namespace RemixTable.Editor
             transport.workspaceInstructions.alignment=TextAlignmentOptions.Left;controller.instructions=transport.workspaceInstructions;
             panel.gameObject.SetActive(false);
             var recenter=RemixSeatedLayout.Button(tools.transform,"RecenterTool","",414,80,font,manager.RecenterWorkspace);((RectTransform)recenter.transform).anchoredPosition=new Vector2(414,0);
+            var move=recenter.GetComponent<RecenterWorkspaceButton>();if(move==null)move=recenter.gameObject.AddComponent<RecenterWorkspaceButton>();move.workspace=controller;move.button=recenter;controller.recenterControl=move;
+            recenter.onClick=new Button.ButtonClickedEvent();UnityEventTools.AddPersistentListener(recenter.onClick,move.Click);
             var master=RemixSeatedLayout.Button(tools.transform,"MasterVolumeTool","",502,80,font,controller.ToggleMasterVolume);((RectTransform)master.transform).anchoredPosition=new Vector2(502,0);
             var oldBg=tools.GetComponent<Image>();if(oldBg!=null)oldBg.enabled=false;
             var backdrop=RemixUiPresentation.ChildImage(tools.transform,"Workspace Tools Background",RemixUiPresentation.Sprite("Surface"));backdrop.rectTransform.sizeDelta=new Vector2(932,55);backdrop.rectTransform.anchoredPosition=new Vector2(96,0);backdrop.color=RemixUiPresentation.Panel;backdrop.transform.SetAsFirstSibling();
-            var nav=manager.navigationToolbar;controller.navigationBackground=nav.background;
-            var handle=nav.background.Find("Grab Border") as RectTransform;
-            if(handle==null){var go=new GameObject("Grab Border",typeof(RectTransform),typeof(Image),typeof(Rigidbody),typeof(XRGrabInteractable));go.transform.SetParent(nav.background,false);handle=(RectTransform)go.transform;}
-            // NearFar sphere casters query the Default physics layer, like the spatial orbs.
-            // Its Canvas Image is still decorative and cannot intercept UGUI raycasts.
-            handle.gameObject.layer=0;RemixUiPresentation.Stretch(handle);handle.offsetMin=new Vector2(-10,-10);handle.offsetMax=new Vector2(10,10);
-            var graphic=handle.GetComponent<Image>();graphic.sprite=RemixUiPresentation.Sprite("HandleBorder");graphic.type=Image.Type.Sliced;graphic.pixelsPerUnitMultiplier=2;graphic.raycastTarget=false;graphic.color=new Color(.61f,.43f,.92f,.85f);
-            controller.borderGraphic=graphic;controller.handleRect=handle;
-            var body=handle.GetComponent<Rigidbody>();body.isKinematic=true;body.useGravity=false;
-            var grab=handle.GetComponent<XRGrabInteractable>();grab.interactionManager=RemixSceneBuilder.All<XRInteractionManager>(manager.gameObject.scene).Single();grab.trackPosition=false;grab.trackRotation=false;grab.throwOnDetach=false;grab.movementType=XRBaseInteractable.MovementType.Instantaneous;
-            var colliders=handle.GetComponents<BoxCollider>();for(int i=colliders.Length;i<4;i++)handle.gameObject.AddComponent<BoxCollider>();
-            controller.borderColliders=handle.GetComponents<BoxCollider>();grab.colliders.Clear();foreach(var collider in controller.borderColliders)grab.colliders.Add(collider);controller.navigationHandle=grab;
+            var oldHandle=manager.navigationToolbar.background.Find("Grab Border");if(oldHandle!=null)Object.DestroyImmediate(oldHandle.gameObject);
             var spatial=RemixSceneBuilder.All<SpatialStemField>(manager.gameObject.scene).Single();spatial.transform.SetParent(manager.workspace,true);
-            controller.uiCanvases=manager.workspace.GetComponentsInChildren<Canvas>(true);controller.Initialize();controller.UpdateFrame();
+            controller.uiCanvases=manager.workspace.GetComponentsInChildren<Canvas>(true);controller.Initialize();
             manager.GetComponent<RemixUiPresentation>().Initialize();
             EditorUtility.SetDirty(manager);EditorUtility.SetDirty(controller);EditorUtility.SetDirty(transport);
         }
         public static void Validate()
         {
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var c=manager.workspaceInteraction;
-            if(c==null || c.navigationHandle==null || c.borderColliders.Length!=4 || c.masterVolumeSlider==null)throw new InvalidOperationException("Workspace references missing");
+            if(c==null || c.recenterControl==null || c.recenterControl.button==null || c.masterVolumeSlider==null)throw new InvalidOperationException("Workspace references missing");
+            if(manager.navigationToolbar.background.Find("Grab Border")!=null || manager.navigationToolbar.GetComponentsInChildren<Collider>(true).Length!=0)throw new InvalidOperationException("Navigation grab border must be removed");
             if(RemixSceneBuilder.All<HandMenuController>(manager.gameObject.scene).Length!=0)throw new InvalidOperationException("Palm activation must be removed");
             var pass=RemixSceneBuilder.All<PassthroughController>(manager.gameObject.scene).Single();
             var room=RemixSceneBuilder.All<RemixPassthroughToggle>(manager.gameObject.scene).Single();

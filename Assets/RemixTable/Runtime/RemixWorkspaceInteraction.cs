@@ -1,22 +1,19 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit;
-using UnityEngine.XR.Interaction.Toolkit.Interactables;
-using UnityEngine.XR.Interaction.Toolkit.Interactors;
 namespace RemixTable
 {
-    // Session-only transform authority. Existing hand samples own scaling; XRI owns frame selection.
+    // Session-only transform authority. Existing hand samples own scaling; UI pointer capture owns workspace movement.
     [DefaultExecutionOrder(200),DisallowMultipleComponent]
     public sealed class RemixWorkspaceInteraction : MonoBehaviour
     {
         public RemixTableManager manager;
         public Transform waveformRoot;
         public LineRenderer playhead;
-        public XRGrabInteractable navigationHandle;
-        public RectTransform navigationBackground,handleRect;
-        public BoxCollider[] borderColliders;
-        public Image borderGraphic;
+        public RecenterWorkspaceButton recenterControl;
+        [Min(.001f)] public float movementThreshold=.012f;
+        [Min(.1f)] public float maximumTapDuration=.6f;
+        public bool HasDragged{get;private set;}
         public Canvas[] uiCanvases;
         public GameObject masterVolumePanel;
         public Slider masterVolumeSlider;
@@ -24,7 +21,7 @@ namespace RemixTable
         [Min(.1f)] public float minimumHeight=.25f,maximumHeight=.65f;
         [Min(.005f)] public float playheadGrabRadius=.03f;
         [Min(.01f)] public float scaleSmoothing=.035f,dragSmoothing=.025f;
-        public enum Ownership { Idle, VerticalScale, NavigationDrag }
+        public enum Ownership { Idle, VerticalScale, WorkspaceMove }
         public Ownership State{get;private set;}
         public bool OwnsGesture=>State!=Ownership.Idle;
         public bool ReleaseRequired{get;private set;}
@@ -34,13 +31,11 @@ namespace RemixTable
         public float Height=>DefaultHeight*VerticalScale;
         float initialSeparation,initialHeight;
         Vector3 dragStart,attachStart;
-        IXRSelectInteractor dragInteractor;
         Transform[] labels;
         Vector3[] labelScales,uiPositions;
         CanvasGroup[] groups;
         bool[] raycasts,interactable;
         bool initialized;
-        Vector2 lastFrameSize;
         public void Initialize()
         {
             if(initialized)return;
@@ -57,18 +52,16 @@ namespace RemixTable
                 uiPositions[i]=uiCanvases[i].transform.localPosition;groups[i]=uiCanvases[i].GetComponent<CanvasGroup>();
                 if(groups[i]==null)groups[i]=uiCanvases[i].gameObject.AddComponent<CanvasGroup>();
             }
-            initialized=true;SetHeight(DefaultHeight);UpdateFrame();
+            initialized=true;SetHeight(DefaultHeight);
         }
         void Awake()=>Initialize();
         void OnEnable()
         {
             if(manager!=null)manager.WorkspaceAlignmentRequested+=CancelOwnedGesture;
-            if(navigationHandle!=null){navigationHandle.selectEntered.AddListener(BeginDrag);navigationHandle.selectExited.AddListener(EndDrag);}
         }
         void OnDisable()
         {
             CancelOwnedGesture();if(manager!=null)manager.WorkspaceAlignmentRequested-=CancelOwnedGesture;
-            if(navigationHandle!=null){navigationHandle.selectEntered.RemoveListener(BeginDrag);navigationHandle.selectExited.RemoveListener(EndDrag);}
         }
         public void SetHeight(float height)
         {
@@ -106,7 +99,7 @@ namespace RemixTable
                 if(left.valid && right.valid && !left.pinch && !right.pinch)ReleaseRequired=false;
                 return true;
             }
-            if(State==Ownership.NavigationDrag)return true;
+            if(State==Ownership.WorkspaceMove)return true;
             if(State==Ownership.VerticalScale)
             {
                 if(!left.valid || !right.valid || !left.pinch || !right.pinch || manager.WorkspaceAligning || !manager.WorkspaceTracked)
@@ -125,57 +118,43 @@ namespace RemixTable
             }
             return false;
         }
-        void BeginDrag(SelectEnterEventArgs args)
+        public bool BeginMove(Vector3 contact)
         {
-            if(manager.ExternalHold || manager.WorkspaceAligning || !manager.anchored || !manager.WorkspaceTracked)
-            {navigationHandle.interactionManager.CancelInteractableSelection((IXRSelectInteractable)navigationHandle);return;}
-            var incoming=args.interactorObject;var attach=incoming.GetAttachTransform((IXRInteractable)navigationHandle);
-            if(attach==null){navigationHandle.interactionManager.CancelInteractableSelection((IXRSelectInteractable)navigationHandle);return;}
-            manager.BeginExternalHold(this);dragInteractor=incoming;
-            attachStart=attach.position;dragStart=manager.workspace.position;State=Ownership.NavigationDrag;BlockUi(true);
+            if(!initialized || manager.ExternalHold || manager.WorkspaceAligning || !manager.anchored || !manager.WorkspaceTracked)return false;
+            manager.BeginExternalHold(this);attachStart=contact;dragStart=manager.workspace.position;
+            HasDragged=false;State=Ownership.WorkspaceMove;BlockUi(true);return true;
         }
-        void EndDrag(SelectExitEventArgs args){if(State==Ownership.NavigationDrag)CancelOwnedGesture();}
+        public void UpdateMove(Vector3 contact,float dt)
+        {
+            if(State!=Ownership.WorkspaceMove)return;
+            if(manager.WorkspaceAligning || !manager.WorkspaceTracked){CancelOwnedGesture();return;}
+            var delta=contact-attachStart;
+            if(delta.sqrMagnitude>=movementThreshold*movementThreshold)HasDragged=true;
+            if(HasDragged)manager.MoveWorkspace(Vector3.Lerp(manager.workspace.position,dragStart+delta,1-Mathf.Exp(-Mathf.Max(0,dt)/dragSmoothing)));
+        }
+        public void FinishMove(float heldSeconds,bool validRelease)
+        {
+            if(State!=Ownership.WorkspaceMove)return;
+            bool tap=validRelease && !HasDragged && heldSeconds<=maximumTapDuration && manager.WorkspaceTracked && !manager.WorkspaceAligning;
+            CancelOwnedGesture();if(tap)manager.RecenterWorkspace();
+        }
         public void CancelOwnedGesture()
         {
             if(!OwnsGesture)return;
-            bool wasDrag=State==Ownership.NavigationDrag;State=Ownership.Idle;dragInteractor=null;ReleaseRequired=true;BlockUi(false);manager.EndExternalHold(this);
-            if(wasDrag && navigationHandle!=null && navigationHandle.isSelected && navigationHandle.interactionManager!=null)
-                navigationHandle.interactionManager.CancelInteractableSelection((IXRSelectInteractable)navigationHandle);
+            if(recenterControl!=null)recenterControl.ClearCapture();
+            State=Ownership.Idle;ReleaseRequired=true;BlockUi(false);manager.EndExternalHold(this);
         }
         void BlockUi(bool block)
         {
             for(int i=0;i<groups.Length;i++)
             {
+                if(groups[i]==null)continue;
                 if(block){raycasts[i]=groups[i].blocksRaycasts;interactable[i]=groups[i].interactable;groups[i].blocksRaycasts=groups[i].interactable=false;}
                 else{groups[i].blocksRaycasts=raycasts[i];groups[i].interactable=interactable[i];}
             }
             var ui=manager.GetComponent<RemixUiPresentation>();if(ui!=null && ui.tooltip!=null)ui.tooltip.Clear();
         }
-        public void AdvanceDrag(float dt)
-        {
-            if(State!=Ownership.NavigationDrag)return;
-            if(manager.WorkspaceAligning || !manager.WorkspaceTracked || navigationHandle==null || !navigationHandle.isSelected || !(dragInteractor is Behaviour owner) || owner==null || !owner.isActiveAndEnabled)
-            {CancelOwnedGesture();return;}
-            var attach=dragInteractor.GetAttachTransform((IXRInteractable)navigationHandle);
-            if(attach==null){CancelOwnedGesture();return;}
-            Vector3 target=dragStart+attach.position-attachStart;
-            manager.MoveWorkspace(Vector3.Lerp(manager.workspace.position,target,1-Mathf.Exp(-Mathf.Max(0,dt)/dragSmoothing)));
-        }
-        public void UpdateFrame()
-        {
-            if(handleRect==null || borderColliders==null || borderColliders.Length!=4)return;
-            Vector2 size=handleRect.rect.size;if(size==lastFrameSize)return;lastFrameSize=size;
-            const float band=10,depth=30;
-            borderColliders[0].center=new Vector3(0,(size.y-band)*.5f,0);borderColliders[0].size=new Vector3(size.x,band,depth);
-            borderColliders[1].center=-borderColliders[0].center;borderColliders[1].size=borderColliders[0].size;
-            borderColliders[2].center=new Vector3((size.x-band)*.5f,0,0);borderColliders[2].size=new Vector3(band,size.y-2*band,depth);
-            borderColliders[3].center=-borderColliders[2].center;borderColliders[3].size=borderColliders[2].size;
-        }
-        void LateUpdate()
-        {
-            UpdateFrame();AdvanceDrag(Time.unscaledDeltaTime);
-            if(borderGraphic!=null)borderGraphic.color=State==Ownership.NavigationDrag?new Color(.86f,.70f,1,1):navigationHandle.isHovered?new Color(.78f,.61f,1,.95f):new Color(.61f,.43f,.92f,.85f);
-        }
+        void LateUpdate(){if(recenterControl!=null)recenterControl.Advance(Time.unscaledDeltaTime);}
         void OnApplicationPause(bool paused){if(paused)CancelOwnedGesture();}
         void OnApplicationFocus(bool focused){if(!focused)CancelOwnedGesture();}
     }
