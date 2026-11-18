@@ -86,14 +86,15 @@ namespace RemixTable.Tests
             var ribbon=manager.ribbons[0];ribbon.visualTime=10;
             Assert.AreEqual(16,Mathf.Repeat(ribbon.Timestamp(manager.design.width*.5f)-ribbon.Timestamp(0),manager.clock.duration),.001f);
         }
-        [Test] public void PalmZoomControlsAreRemovedButOtherFeaturesAndGuidanceRemain()
+        [Test] public void PalmIsRemovedAndMasterVolumeGuidanceRemainAccessibleInWorkspace()
         {
-            var panel=manager.palmMenuCanvas.transform.Find("Panel");
+            var panel=manager.workspaceInteraction.masterVolumePanel.transform;
             Assert.IsNull(panel.Find("TimelineZoom"));Assert.IsNull(panel.Find("TimelineZoomOptions"));
-            foreach(string name in new[]{"Title","Passthrough Toggle","Volume Label","Volume Slider","Close Button","RemixGestureInstructions"}) Assert.NotNull(panel.Find(name));
+            foreach(string name in new[]{"Volume Label","Volume Slider","Workspace Instructions"}) Assert.NotNull(panel.Find(name));
             foreach(var button in panel.GetComponentsInChildren<Button>(true)) for(int i=0;i<button.onClick.GetPersistentEventCount();i++) Assert.IsFalse(button.onClick.GetPersistentTarget(i) is TimelineZoomUI);
-            var transport=manager.workspace.GetComponentInChildren<RemixTransport>();Assert.AreEqual(RemixTransport.Guidance,transport.palmInstructions.text);Assert.IsTrue(transport.palmInstructions.gameObject.activeSelf);
-            var rect=(RectTransform)transport.palmInstructions.transform;Assert.AreEqual(new Vector2(0,-82),rect.anchoredPosition);Assert.AreEqual(new Vector2(316,142),rect.sizeDelta);
+            var transport=manager.workspace.GetComponentInChildren<RemixTransport>();Assert.AreEqual(RemixTransport.WorkspaceGuidance,transport.workspaceInstructions.text);Assert.IsTrue(transport.workspaceInstructions.gameObject.activeSelf);
+            var rect=(RectTransform)transport.workspaceInstructions.transform;Assert.AreEqual(new Vector2(0,-35),rect.anchoredPosition);Assert.AreEqual(new Vector2(320,150),rect.sizeDelta);
+            Assert.NotNull(manager.workspace.Find("ToolsCanvas/RecenterTool"));Assert.NotNull(manager.workspace.Find("ToolsCanvas/MasterVolumeTool"));
         }
         [Test] public void ReparentedUndoRedoButtonsRemainOperational()
         {

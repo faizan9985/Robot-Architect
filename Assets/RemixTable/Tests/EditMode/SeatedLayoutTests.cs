@@ -71,6 +71,7 @@ namespace RemixTable.Tests
                 for(int j=i+1;j<4;j++){var other=rows[j].InteractionBounds;other.center=rows[j].transform.localPosition;Assert.IsFalse(bounds.Intersects(other));}
             }
             Assert.IsEmpty(manager.workspace.GetComponentsInChildren<Collider>());
+            Assert.IsEmpty(manager.workspaceInteraction.waveformRoot.GetComponentsInChildren<Collider>(),"waveform hit regions remain analytical");
             Assert.IsEmpty(manager.workspace.GetComponentsInChildren<ScrollRect>());
         }
         [Test] public void HandMappingSelectsOnlyItsLaneAndPreservesTimestampScale()
@@ -123,14 +124,14 @@ namespace RemixTable.Tests
             Assert.IsFalse(Object.FindObjectsByType<SpatialSongPicker>(FindObjectsSortMode.None).Any(x=>x.isActiveAndEnabled));
             Assert.IsEmpty(Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(FindObjectsSortMode.None)); // XRI creates its one runtime module.
         }
-        [Test] public void PalmGuidanceFollowsExistingMenuVisibilityAndDoesNotCoverControls()
+        [Test] public void WorkspaceGuidanceFollowsVolumePanelVisibilityAndDoesNotCoverControls()
         {
-            var instructions=transport.palmInstructions;Assert.AreEqual(RemixTransport.Guidance,instructions.text);
-            Assert.IsFalse(instructions.raycastTarget);Assert.IsFalse(instructions.transform.IsChildOf(manager.workspace));
-            var canvas=instructions.GetComponentInParent<Canvas>(true);Assert.AreEqual("Hand Menu Canvas",canvas.name);
-            canvas.gameObject.SetActive(true);Assert.IsTrue(instructions.gameObject.activeInHierarchy);
+            var instructions=transport.workspaceInstructions;Assert.AreEqual(RemixTransport.WorkspaceGuidance,instructions.text);
+            Assert.IsFalse(instructions.raycastTarget);Assert.IsTrue(instructions.transform.IsChildOf(manager.workspace));
+            var canvas=instructions.GetComponentInParent<Canvas>(true);Assert.AreEqual("ToolsCanvas",canvas.name);
+            manager.workspaceInteraction.masterVolumePanel.SetActive(true);Assert.IsTrue(instructions.gameObject.activeInHierarchy);
             var rect=(RectTransform)instructions.transform;var own=new Rect(rect.anchoredPosition-rect.sizeDelta*.5f,rect.sizeDelta);
-            foreach(var control in canvas.GetComponentsInChildren<Selectable>())
+            foreach(var control in manager.workspaceInteraction.masterVolumePanel.GetComponentsInChildren<Selectable>(true))
             {
                 var r=(RectTransform)control.transform;
                 Assert.IsFalse(own.Overlaps(new Rect(r.anchoredPosition-r.sizeDelta*.5f,r.sizeDelta)),control.name);

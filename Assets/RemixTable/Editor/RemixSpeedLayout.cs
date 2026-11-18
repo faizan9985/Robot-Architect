@@ -70,23 +70,15 @@ namespace RemixTable.Editor
             var zoomButtons=new[]{ui.detail,ui.normal,ui.wide,ui.overview};for(int i=0;i<4;i++) Position(zoomButtons[i],i,0);
             if(ui.workspaceRange==null) ui.workspaceRange=RemixSeatedLayout.Text(transport.transform,"TimelineZoomRange","8s visible",new Vector2(58,30),new Vector2(150,26),11,font);
             toolbar.speed=selector;toolbar.zoom=ui;
-            RemovePalmZoom(manager,transport);
+            RefreshWorkspaceGuidance(manager,transport);
             toolbar.ResetClosed();selector.Refresh();ui.RefreshNow();
             foreach(var item in new Object[]{toolbar,selector,ui,manager}) EditorUtility.SetDirty(item);
             return selector;
         }
-        static void RemovePalmZoom(RemixTableManager manager,RemixTransport transport)
+        static void RefreshWorkspaceGuidance(RemixTableManager manager,RemixTransport transport)
         {
-            var panel=manager.palmMenuCanvas.transform.Find("Panel");
-            foreach(string name in new[]{"TimelineZoom","TimelineZoomOptions"})
-            {
-                var obsolete=panel.Find(name);if(obsolete!=null) Object.DestroyImmediate(obsolete.gameObject);
-            }
-            // Restore the original instruction area rather than leaving the removed section's gap.
-            var guidance=(RectTransform)transport.palmInstructions.transform;
-            guidance.anchoredPosition=new Vector2(0,-82);guidance.sizeDelta=new Vector2(316,142);
-            transport.palmInstructions.text=RemixTransport.Guidance;transport.palmInstructions.fontSize=13;
-            guidance.gameObject.SetActive(true);
+            // The hand menu no longer exists. Zoom remains exclusively in the animated navigation.
+            if(transport.workspaceInstructions!=null)transport.workspaceInstructions.text=RemixTransport.WorkspaceGuidance;
         }
         static RectTransform Viewport(Transform owner,float height,out CanvasGroup group,out RectTransform content)
         {
@@ -134,8 +126,7 @@ namespace RemixTable.Editor
             Binding(selector.speedButton,selector,nameof(RemixSpeedSelector.Toggle));
             var zoomButtons=new[]{ui.detail,ui.normal,ui.wide,ui.overview};var methods=new[]{nameof(TimelineZoomUI.Detail),nameof(TimelineZoomUI.Normal),nameof(TimelineZoomUI.Wide),nameof(TimelineZoomUI.Overview)};
             Binding(ui.expand,ui,nameof(TimelineZoomUI.ToggleOptions));for(int i=0;i<4;i++) Binding(zoomButtons[i],ui,methods[i]);
-            var panel=manager.palmMenuCanvas.transform.Find("Panel");
-            RemixSceneBuilder.Require(panel.Find("TimelineZoom")==null && panel.Find("TimelineZoomOptions")==null,"obsolete palm zoom UI removed");
+            RemixSceneBuilder.Require(RemixSceneBuilder.All<HandMenuController>(manager.gameObject.scene).Length==0,"palm activation removed");
             float y=toolbar.transform.localPosition.y;
             try
             {

@@ -7,6 +7,8 @@ namespace RemixTable
         public Color[] colors = { new Color(1,.24f,.035f), new Color(.15f,1,.3f), new Color(.03f,.85f,1), new Color(.65f,.18f,1) };
         public float emission = 1.8f, width = .86f, thickness = .007f, spacing = .105f;
         public float interactionRadius = .055f, animationSpeed = 1, highlight = 1.8f;
+        [Tooltip("Transient hand-contact glow falloff radius in world meters along the waveform arc.")]
+        [Range(.025f,.25f)] public float contactGlowRadius=.09f;
         public float maxSemitones = 12, pitchDistance = .12f, amplitude = .018f;
         public float minGain = 0, maxGain = 2.5f, resyncSpeed = 6, visibleSeconds = 8;
         [Min(.001f)] public float gainBoundaryFade = .06f;

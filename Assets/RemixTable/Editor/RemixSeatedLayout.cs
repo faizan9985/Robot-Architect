@@ -90,9 +90,8 @@ namespace RemixTable.Editor
             foreach(var picker in RemixSceneBuilder.All<SpatialSongPicker>(scene)){picker.gameObject.SetActive(false);picker.transform.SetParent(legacy,true);}
             foreach(var text in workspace.GetComponentsInChildren<TextMesh>(true).Where(x=>x.text.Contains("PINCH + LIFT")).ToArray())text.transform.SetParent(legacy,true);
             var particles=workspace.Find("AmbientParticles");if(particles!=null)particles.gameObject.SetActive(false);
-            var menu=RemixSceneBuilder.All<HandMenuController>(scene).Single();var menuData=new SerializedObject(menu);
-            var menuCanvas=(Canvas)menuData.FindProperty("menuCanvas").objectReferenceValue;
-            var font=menuCanvas.GetComponentsInChildren<TMP_Text>(true).First().font;
+            var existingTransport=workspace.GetComponentInChildren<RemixTransport>(true);
+            var font=existingTransport!=null?existingTransport.songTitle.font:TMP_Settings.defaultFontAsset;
             var transportRect=Rect(workspace,"TransportCanvas",Vector2.zero,new Vector2(d.panelWidth*1000,d.transportHeight*1000));
             transportRect.localScale=Vector3.one*.001f;transportRect.localPosition=new Vector3(0,d.TransportY,-.006f);
             var canvas=transportRect.GetComponent<Canvas>();if(canvas==null)canvas=transportRect.gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=origin.Camera;canvas.additionalShaderChannels=AdditionalCanvasShaderChannels.TexCoord1|AdditionalCanvasShaderChannels.Normal|AdditionalCanvasShaderChannels.Tangent;
@@ -105,13 +104,8 @@ namespace RemixTable.Editor
             transport.playPauseLabel=transport.playPause.GetComponentInChildren<TMP_Text>();
             transport.songTitle=Text(transportRect,"SongTitle",manager.library.Current.title,new Vector2(-100,30),new Vector2(400,26),16,font);
             transport.playbackTime=Text(transportRect,"PlaybackTime","00:00",new Vector2(242,30),new Vector2(210,26),14,font);
-            // Keep existing menu components and event references; make space for accurate guidance.
-            var panel=(RectTransform)menuCanvas.transform.Find("Panel");panel.anchoredPosition=Vector2.zero;panel.sizeDelta=new Vector2(360,430);((RectTransform)menuCanvas.transform).sizeDelta=panel.sizeDelta;
-            string[] names={"Title","Passthrough Toggle","Volume Label","Volume Slider","Close Button"};float[] ys={185,128,77,37,-184};
-            for(int i=0;i<names.Length;i++){var rect=menuCanvas.GetComponentsInChildren<RectTransform>(true).Single(x=>x.name==names[i]);rect.anchoredPosition=new Vector2(0,ys[i]);}
-            transport.palmInstructions=Text(panel,"RemixGestureInstructions",RemixTransport.Guidance,new Vector2(0,-82),new Vector2(316,142),13,font);
-            transport.palmInstructions.alignment=TextAlignmentOptions.Left;
             RemixModeLayout.Build(manager,transport);
+            RemixWorkspaceLayout.Configure(manager);
             for(int i=0;i<4;i++)RemixSceneBuilder.Require(manager.audioManager.sources[i]==sourceRefs[i] && sourceRefs[i].clip==clips[i],"preserved stem source and clip references");
             EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);AssetDatabase.SaveAssets();Validate();
         }
@@ -141,7 +135,7 @@ namespace RemixTable.Editor
         {
             var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
             var ui=RemixSceneBuilder.All<TimelineZoomUI>(scene).Single();
-            RemixSceneBuilder.Require(ui.manager.palmMenuCanvas!=null && ui.manager.zoom.VisibleSeconds==8,"shared Normal default and original palm canvas");
+            RemixSceneBuilder.Require(ui.manager.workspaceInteraction!=null && ui.manager.zoom.VisibleSeconds==8,"shared Normal default and workspace authority");
             foreach(var button in new[]{ui.expand,ui.detail,ui.normal,ui.wide,ui.overview})
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount()==1 && button.onClick.GetPersistentTarget(0)==ui,"zoom button binding "+button.name);
             RemixSceneBuilder.Require(ui.toolbar!=null && ui.expand.GetComponentInParent<Canvas>(true)==ui.toolbar.GetComponent<Canvas>() && ui.workspaceRange.GetComponentInParent<RemixTransport>()!=null,"zoom feedback uses navigation and transport canvases");
@@ -160,7 +154,7 @@ namespace RemixTable.Editor
             RemixSceneBuilder.Require(transport.GetComponent<Canvas>().renderMode==RenderMode.WorldSpace && transport.GetComponent<TrackedDeviceGraphicRaycaster>()!=null,"world transport with XRI raycaster");
             foreach(var button in new[]{transport.previousSong,transport.playPause,transport.nextSong})RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount()==1 && button.onClick.GetPersistentTarget(0)==transport,"transport binding "+button.name);
             RemixSceneBuilder.Require(!RemixSceneBuilder.All<SpatialSongPicker>(scene).Any(x=>x.isActiveAndEnabled),"no duplicate active song picker");
-            RemixSceneBuilder.Require(transport.palmInstructions.text==RemixTransport.Guidance && transport.palmInstructions.GetComponentInParent<Canvas>(true).name=="Hand Menu Canvas","palm guidance and visibility parent");
+            RemixSceneBuilder.Require(transport.workspaceInstructions.text==RemixTransport.WorkspaceGuidance && transport.workspaceInstructions.transform.IsChildOf(manager.workspace),"workspace guidance and visibility parent");
             Debug.Log("REMIX_SEATED_VALIDATION_PASS");
         }
         public static void Audit()

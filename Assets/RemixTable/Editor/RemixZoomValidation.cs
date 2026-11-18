@@ -55,7 +55,7 @@ namespace RemixTable.Editor
             foreach(var control in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include,FindObjectsSortMode.None))
                 if(control is RemixTransport || control is RemixModeSelector || control is RemixPlaybackModeSelector)
                     RemixSceneBuilder.Require(control.transform.IsChildOf(manager.workspace),"transport and mode controls follow workspace root");
-            RemixSceneBuilder.Require(!manager.palmMenuCanvas.transform.IsChildOf(manager.workspace),"palm menu remains hand relative");
+            RemixSceneBuilder.Require(manager.workspaceInteraction!=null && manager.workspaceInteraction.masterVolumeSlider.transform.IsChildOf(manager.workspace),"volume control is workspace relative");
             RemixSceneBuilder.Require(manager.design.interactiveAngle==180 && manager.design.arcAngle==180,"full arc editing");
             RemixSceneBuilder.Require(UnityEngine.Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include,FindObjectsSortMode.None).Length==1,"one AudioListener");
             File.WriteAllText("Logs/RemixZoomSceneValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
