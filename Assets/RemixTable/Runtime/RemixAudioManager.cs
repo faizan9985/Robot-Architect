@@ -15,6 +15,14 @@ namespace RemixTable
         readonly HashSet<Behaviour> editingOwners = new HashSet<Behaviour>();
         public int EditingPauseCount => editingOwners.Count;
         public bool IsManuallyPaused => manualPaused;
+        // Main menu is open: the song stays paused underneath it (a song picked from the menu loads paused too).
+        // Independent of the PAUSE button, so closing the menu restores whatever the listener had chosen.
+        bool menuHold;
+        public bool MenuHold
+        {
+            get => menuHold;
+            set { if (menuHold == value) return; menuHold = value; ApplyPlaybackState(); }
+        }
         // EDIT (default): holding a ribbon pauses the song while you shape it.
         // LIVE: playback keeps running while you edit, so changes are heard as the song plays.
         [SerializeField] bool liveMode;
@@ -144,7 +152,7 @@ namespace RemixTable
         }
         void ApplyPlaybackState()
         {
-            if (manualPaused || suspended || (!liveMode && editingOwners.Count > 0)) PauseTransport();
+            if (manualPaused || suspended || menuHold || (!liveMode && editingOwners.Count > 0)) PauseTransport();
             else ResumeTransport();
         }
         readonly float[] samples = new float[128];

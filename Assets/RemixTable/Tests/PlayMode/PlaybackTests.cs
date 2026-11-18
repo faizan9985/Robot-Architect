@@ -9,6 +9,7 @@ namespace RemixTable.Tests
         #if UNITY_EDITOR
         [UnityTest] public IEnumerator SavedSceneStartsWithInheritedXrAndFourAnimatedRibbons()
         {
+            RemixMainMenu.OpenOnStart=false; // Start on the table, not the main menu.
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode("Assets/RemixTable/Scenes/RemixTable.unity",new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
             yield return new WaitForSeconds(2);
             var manager=Object.FindFirstObjectByType<RemixTableManager>();
