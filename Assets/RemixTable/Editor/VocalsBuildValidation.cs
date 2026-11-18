@@ -19,6 +19,7 @@ namespace RemixTable.Editor
         {
             EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
             RibbonVisualValidation.Validate();
+            RemixUiLayout.Validate();
             foreach(string path in new[]{VocalsHologram.BodyPath,VocalsHologram.HaloPath,VocalsHologram.StemBodyPath,VocalsHologram.StemHaloPath})
             {
                 var material=Resources.Load<Material>(path);
@@ -55,9 +56,9 @@ namespace RemixTable.Editor
                 "Assets/Resources/VocalsHolographicHalo.mat","Assets/Resources/StemHolographicBody.mat",
                 "Assets/Resources/StemHolographicHalo.mat","Assets/RemixTable/Shaders/VocalsHolographic.shader",
                 "Assets/Resources/SpatialHolographicCore.mat","Assets/Resources/SpatialHolographicHalo.mat",
-                "Assets/RemixTable/Shaders/SpatialHolographic.shader"})
+                "Assets/RemixTable/Shaders/SpatialHolographic.shader","Assets/Resources/RemixUiAtlas.png"})
                 if(!packed.Contains(path)) throw new BuildFailedException("Vocals asset missing from player: "+path);
-            File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic") || p.Contains("StemHolographic") || p.Contains("SpatialHolographic")));
+            File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic") || p.Contains("StemHolographic") || p.Contains("SpatialHolographic") || p.Contains("RemixUiAtlas")));
             Debug.Log("VOCALS_PACKED_ASSET_VALIDATION_PASS");
             Debug.Log("VOCALS_QUEST_BUILD_PASS bytes="+report.summary.totalSize);
         }
