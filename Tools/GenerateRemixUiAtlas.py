@@ -7,7 +7,7 @@ import json, math
 from PIL import Image, ImageDraw
 
 ROOT=Path(__file__).resolve().parent.parent
-NAMES=['Play','Pause','Stop','Record','Previous','Next','Undo','Redo','Volume','Filter','Pitch','Mute','Solo','Loop','Snap','Clear','Reset','Save','Voice','Help','Tools','Room','Spatial','Close','Edit','Live','Check','Surface','Border']
+NAMES=['Play','Pause','Stop','Record','Previous','Next','Undo','Redo','Volume','Filter','Pitch','Mute','Solo','Loop','Snap','Clear','Reset','Save','Voice','Help','Tools','Room','Spatial','Close','Edit','Live','Check','Surface','Border','Recenter','HandleBorder']
 S=512
 def icon(name):
     im=Image.new('RGBA',(S,S));d=ImageDraw.Draw(im)
@@ -50,6 +50,9 @@ def icon(name):
     elif name=='Edit':line([(5,15),(15,5),(20,10),(10,20),(4,21),(5,15)]);line([(12,8),(17,13)])
     elif name=='Live':poly([(5,6),(14,12),(5,18)]);line([(17,7),(17,17)]);arc((13,4,23,20),300,60)
     elif name=='Check':line([(5,12),(10,17),(20,7)],2.4)
+    elif name=='Recenter':
+        ellipse((8,8,16,16));line([(3,8),(3,3),(8,3)]);line([(16,3),(21,3),(21,8)]);line([(21,16),(21,21),(16,21)]);line([(8,21),(3,21),(3,16)])
+    elif name=='HandleBorder':rect((1.2,1.2,22.8,22.8),5,None,2.4)
     elif name in ['Surface','Border']:
         rect((.25,.25,23.75,23.75),5,'white' if name=='Surface' else None,.55)
     else:raise ValueError(name)

@@ -47,8 +47,7 @@ namespace RemixTable
                 view.Initialize(this,b);buttons.Add(view);
             }
             controls=buttons.ToArray();
-            foreach(var toggle in manager.palmMenuCanvas.GetComponentsInChildren<Toggle>(true))if(toggle.graphic!=null)toggle.graphic.color=Violet;
-            foreach(var slider in manager.palmMenuCanvas.GetComponentsInChildren<Slider>(true))
+            foreach(var slider in manager.workspace.GetComponentsInChildren<Slider>(true))
             {
                 if(slider.fillRect!=null && slider.fillRect.TryGetComponent<Image>(out var fill))fill.color=Violet;
                 if(slider.handleRect!=null && slider.handleRect.TryGetComponent<Image>(out var handle)){handle.color=Ink;handle.sprite=Sprite("Surface");handle.type=Image.Type.Sliced;handle.pixelsPerUnitMultiplier=2.5f;}

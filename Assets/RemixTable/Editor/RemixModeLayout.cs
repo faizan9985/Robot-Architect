@@ -67,8 +67,8 @@ namespace RemixTable.Editor
             selector.pitchButton = RemixSeatedLayout.Button(rect, "PitchMode", "PITCH", 215, 150, font, selector.SelectPitch);
             foreach (var b in new[] { selector.volumeButton, selector.filterButton, selector.pitchButton }) ((RectTransform)b.transform).anchoredPosition = new Vector2(((RectTransform)b.transform).anchoredPosition.x, 0);
             selector.volumeButton.image.color = selector.selectedColor; selector.filterButton.image.color = selector.idleColor; selector.pitchButton.image.color = selector.idleColor;
-            transport.palmInstructions.text = RemixTransport.Guidance;
-            EditorUtility.SetDirty(selector); EditorUtility.SetDirty(transport.palmInstructions);
+            if(transport.workspaceInstructions!=null){transport.workspaceInstructions.text=RemixTransport.WorkspaceGuidance;EditorUtility.SetDirty(transport.workspaceInstructions);}
+            EditorUtility.SetDirty(selector);
             BuildPlayback(manager, transport);
             BuildHistory(manager, transport);
             return selector;
@@ -171,7 +171,7 @@ namespace RemixTable.Editor
             foreach (var (button, method) in new[] { (selector.volumeButton, nameof(RemixModeSelector.SelectVolume)), (selector.filterButton, nameof(RemixModeSelector.SelectFilter)), (selector.pitchButton, nameof(RemixModeSelector.SelectPitch)) })
                 RemixSceneBuilder.Require(button.onClick.GetPersistentEventCount() == 1 && button.onClick.GetPersistentTarget(0) == selector && button.onClick.GetPersistentMethodName(0) == method, "mode binding " + button.name);
             var transport = RemixSceneBuilder.All<RemixTransport>(scene).Single();
-            RemixSceneBuilder.Require(transport.palmInstructions.text == RemixTransport.Guidance, "palm guidance mentions modes");
+            RemixSceneBuilder.Require(transport.workspaceInstructions.text == RemixTransport.WorkspaceGuidance, "workspace guidance mentions modes and transforms");
             var playback = RemixSceneBuilder.All<RemixPlaybackModeSelector>(scene).Single();
             RemixSceneBuilder.Require(playback.manager == manager && manager.audioManager != null, "playback selector wired to manager");
             RemixSceneBuilder.Require(playback.GetComponent<Canvas>().renderMode == RenderMode.WorldSpace && playback.GetComponent<TrackedDeviceGraphicRaycaster>() != null, "playback canvas is pokeable world UI");

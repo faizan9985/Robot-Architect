@@ -17,9 +17,10 @@ namespace RemixTable.Editor
         }
         public static void Validate()
         {
-            EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
+            RemixSceneBuilder.Validate();
             RibbonVisualValidation.Validate();
             RemixUiLayout.Validate();
+            RemixWorkspaceLayout.Validate();
             foreach(string path in new[]{VocalsHologram.BodyPath,VocalsHologram.HaloPath,VocalsHologram.StemBodyPath,VocalsHologram.StemHaloPath})
             {
                 var material=Resources.Load<Material>(path);

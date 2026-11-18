@@ -1,7 +1,13 @@
 fileFormatVersion: 2
 guid: b6b95a9c8d524bccacc9b73b0dfbf80d
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: 1936120390209086043
+    second: Recenter
+  - first:
+      213: -7164114085402549149
+    second: HandleBorder
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -760,6 +766,50 @@ TextureImporter:
       indices:
       edges: []
       weights: []
+    - serializedVersion: 2
+      name: Recenter
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 0
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b52adc4ac3b7eda10800000000000000
+      internalID: 1936120390209086043
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: HandleBorder
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 0
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 32, y: 32, z: 32, w: 32}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36465394234f39c90800000000000000
+      internalID: -7164114085402549149
+      vertices: []
+      indices:
+      edges: []
+      weights: []
     outline: []
     customData:
     physicsShape: []
@@ -780,6 +830,7 @@ TextureImporter:
       Close: -358807857636572042
       Edit: -2550597156960233817
       Filter: -4223181983795370655
+      HandleBorder: -7164114085402549149
       Help: -391031555850208452
       Live: 7576532925286610526
       Loop: 8261782101378531025
@@ -789,6 +840,7 @@ TextureImporter:
       Pitch: 1460332671421978395
       Play: 4530770355093785710
       Previous: -7390322182623993024
+      Recenter: 1936120390209086043
       Record: -5769706095674169571
       Redo: -1822327741067446538
       Reset: 1101046490729712514

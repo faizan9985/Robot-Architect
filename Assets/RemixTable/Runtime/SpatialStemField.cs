@@ -62,6 +62,8 @@ namespace RemixTable
         }
         void Grab(int stem, bool grabbing)
         {
+            if(grabbing && manager.workspaceInteraction!=null && manager.workspaceInteraction.OwnsGesture)
+            {orbs[stem].interactionManager.CancelInteractableSelection((IXRSelectInteractable)orbs[stem]);return;}
             held[stem] = grabbing;
             if (grabbing) manager.BeginExternalHold(orbs[stem]);
             else
@@ -87,7 +89,7 @@ namespace RemixTable
             for (int i = 0; i < orbs.Length; i++)
             {
                 if (orbs[i] == null) continue;
-                orbs[i].enabled=!manager.WorkspaceAligning;
+                orbs[i].enabled=!manager.WorkspaceAligning && (manager.workspaceInteraction==null || !manager.workspaceInteraction.OwnsGesture);
                 var stem = (StemId)i; var t = orbs[i].transform;
                 // Held orbs drive the mix; free orbs follow it (a loaded save or a re-anchored table).
                 if (held[i]) manager.mix.SetPosition(stem, manager.SpatialLocal(t.position));

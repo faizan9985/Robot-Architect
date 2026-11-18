@@ -29,7 +29,9 @@ namespace RemixTable
         public void EndExternalHold(Object owner) => externalHolds.Remove(owner);
         public bool anchored;
         public TimelineZoom zoom = new TimelineZoom();
-        public Canvas palmMenuCanvas;
+        public RemixWorkspaceInteraction workspaceInteraction;
+        Pose placementPose;
+        Vector3 sessionOffset;
         readonly List<XRInputSubsystem> inputSubsystems=new List<XRInputSubsystem>();
         XRInputSubsystem inputSubsystem;
         float nextInputSearch, settleTime;
@@ -55,7 +57,7 @@ namespace RemixTable
         void LateUpdate()
         {
             UpdateWorkspaceAlignment();
-            zoom.Tick(Time.unscaledDeltaTime,IsEditing,design.zoomSmoothingSeconds);
+            zoom.Tick(Time.unscaledDeltaTime,IsEditing || (workspaceInteraction!=null && workspaceInteraction.OwnsGesture),design.zoomSmoothingSeconds);
         }
         void OnEnable()
         {
@@ -123,6 +125,18 @@ namespace RemixTable
             externalHolds.Clear();
             // Release any independently held ribbon owners as well; manual pause and automation survive.
             if(ribbons!=null) foreach(var ribbon in ribbons) if(ribbon!=null && ribbon.selected) ribbon.SetSelected(false);
+        }
+        public void MoveWorkspace(Vector3 position)
+        {
+            if(!anchored || alignmentPending || !Finite(position))return;
+            sessionOffset=Quaternion.Inverse(placementPose.rotation)*(position-placementPose.position);
+            workspace.position=position;
+        }
+        public void RecenterWorkspace()
+        {
+            sessionOffset=Vector3.zero;
+            if(workspaceInteraction!=null){workspaceInteraction.CancelOwnedGesture();workspaceInteraction.ResetHeight();}
+            RequestWorkspaceAlignment();
         }
         void TrackingOriginUpdated(XRInputSubsystem source)
         {
@@ -202,7 +216,9 @@ namespace RemixTable
             settleTime+=Mathf.Max(0,deltaTime);
             if(settleTime<Mathf.Max(.01f,design.recenterStabilizationSeconds)) return;
             ApplyLaneLayout();
-            workspace.SetPositionAndRotation(pose.position,pose.rotation);
+            if(workspaceInteraction!=null)workspaceInteraction.ApplyLayout();
+            placementPose=pose;
+            workspace.SetPositionAndRotation(pose.position+pose.rotation*sessionOffset,pose.rotation);
             anchored=true;alignmentPending=false;hasCandidate=false;
         }
         static bool Finite(Vector3 value) => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);

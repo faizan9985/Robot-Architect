@@ -16,7 +16,7 @@ namespace RemixTable.Tests
             yield return new WaitForSeconds(1);
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var gestures=manager.interactions;
             manager.enabled=false;gestures.enabled=false;manager.audioManager.Pause();manager.audioManager.enabled=false;manager.clock.playing=false;
-            manager.navigationToolbar.ResetClosed();manager.palmMenuCanvas.gameObject.SetActive(false);
+            manager.navigationToolbar.ResetClosed();manager.workspaceInteraction.masterVolumePanel.SetActive(false);
             var head=new Pose(manager.workspaceCamera.transform.position,manager.workspaceCamera.transform.rotation);
             manager.RequestWorkspaceAlignment();manager.ProcessWorkspacePose(head,true,Pose.identity,TrackingOriginModeFlags.Floor,0,.5f);manager.ProcessWorkspacePose(head,true,Pose.identity,TrackingOriginModeFlags.Floor,0,.5f);
             Assert.IsFalse(manager.WorkspaceAligning);

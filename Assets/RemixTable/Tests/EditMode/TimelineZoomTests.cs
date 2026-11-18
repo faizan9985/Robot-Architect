@@ -47,7 +47,7 @@ namespace RemixTable.Tests
         {
             EditorSceneManager.OpenScene("Assets/RemixTable/Scenes/RemixTable.unity");
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var ui=Object.FindFirstObjectByType<TimelineZoomUI>();
-            Assert.AreSame(manager,ui.manager);Assert.NotNull(manager.palmMenuCanvas);
+            Assert.AreSame(manager,ui.manager);Assert.NotNull(manager.workspaceInteraction.masterVolumeSlider);
             var buttons=new[]{ui.detail,ui.normal,ui.wide,ui.overview};float[] presets={4,8,16,32};
             var position=manager.workspace.position;var rotation=manager.workspace.rotation;
             var point=manager.design.ArcPoint(.1f);
@@ -69,7 +69,7 @@ namespace RemixTable.Tests
             Assert.AreEqual(position,manager.workspace.position);Assert.AreEqual(rotation,manager.workspace.rotation);Assert.AreEqual(point,manager.design.ArcPoint(.1f));
             Assert.AreEqual(22,edit.start);Assert.AreEqual(24,edit.end);Assert.AreEqual(.4f,edit.value);
             ui.expand.onClick.SetPersistentListenerState(0,UnityEventCallState.EditorAndRuntime);
-            var guidance=manager.workspace.GetComponentInChildren<RemixTransport>().palmInstructions.gameObject;
+            var guidance=manager.workspace.GetComponentInChildren<RemixTransport>().workspaceInstructions.gameObject;
             Assert.IsFalse(ui.options.activeSelf);ui.expand.onClick.Invoke();ui.toolbar.AdvanceAnimation(1);Assert.IsTrue(ui.options.activeSelf);Assert.IsTrue(guidance.activeSelf);
             ui.expand.onClick.Invoke();ui.toolbar.AdvanceAnimation(1);Assert.IsFalse(ui.options.activeSelf);Assert.IsTrue(guidance.activeSelf);
             manager.ribbons[0].selected=true;float frozen=manager.zoom.VisibleSeconds;
@@ -131,12 +131,12 @@ namespace RemixTable.Tests
             ribbon.selected=false;
             Tick(Hand(-.15f),Hand(.15f));gestures.Cancel();Assert.IsTrue(gestures.ZoomReleaseRequired);
         }
-        [Test] public void CancelRequiresReleaseAndPalmMenuBlocksAcquisition()
+        [Test] public void CancelRequiresReleaseAndVolumePanelBlocksAcquisition()
         {
             Tick(Hand(-.15f),Hand(.15f));gestures.Cancel();
             Assert.IsTrue(gestures.ZoomReleaseRequired);Assert.AreEqual(RibbonInteractionManager.GestureState.Idle,gestures.State);
             Tick(Hand(-.15f,pinch:false),Hand(.15f,pinch:false));
-            var menu=new GameObject("existing menu",typeof(Canvas));menu.transform.SetParent(root.transform);manager.palmMenuCanvas=menu.GetComponent<Canvas>();
+            var menu=new GameObject("existing menu",typeof(Canvas));menu.transform.SetParent(root.transform);manager.workspaceInteraction=root.AddComponent<RemixWorkspaceInteraction>();manager.workspaceInteraction.manager=manager;manager.workspaceInteraction.masterVolumePanel=menu;
             Tick(Hand(-.15f),Hand(.15f));Assert.AreEqual(RibbonInteractionManager.GestureState.Idle,gestures.State);
         }
     }

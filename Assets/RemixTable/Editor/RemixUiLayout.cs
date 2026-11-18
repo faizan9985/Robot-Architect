@@ -14,7 +14,7 @@ namespace RemixTable.Editor
     public static class RemixUiLayout
     {
         public const string AtlasPath="Assets/Resources/RemixUiAtlas.png";
-        static readonly string[] Names={"Play","Pause","Stop","Record","Previous","Next","Undo","Redo","Volume","Filter","Pitch","Mute","Solo","Loop","Snap","Clear","Reset","Save","Voice","Help","Tools","Room","Spatial","Close","Edit","Live","Check","Surface","Border"};
+        static readonly string[] Names={"Play","Pause","Stop","Record","Previous","Next","Undo","Redo","Volume","Filter","Pitch","Mute","Solo","Loop","Snap","Clear","Reset","Save","Voice","Help","Tools","Room","Spatial","Close","Edit","Live","Check","Surface","Border","Recenter","HandleBorder"};
         public static void ImportAtlas()
         {
             var importer=AssetImporter.GetAtPath(AtlasPath) as TextureImporter;
@@ -25,7 +25,7 @@ namespace RemixTable.Editor
             importer.spritePixelsPerUnit=100;importer.mipmapEnabled=false;importer.alphaIsTransparency=true;importer.sRGBTexture=true;importer.isReadable=false;
             importer.filterMode=FilterMode.Bilinear;importer.wrapMode=TextureWrapMode.Clamp;importer.textureCompression=TextureImporterCompression.Uncompressed;
             var settings=new TextureImporterSettings();importer.ReadTextureSettings(settings);settings.spriteMeshType=SpriteMeshType.FullRect;importer.SetTextureSettings(settings);
-            importer.spritesheet=Names.Select((name,i)=>new SpriteMetaData{name=name,rect=new Rect(i%8*128,512-(i/8+1)*128,128,128),pivot=new Vector2(.5f,.5f),alignment=(int)SpriteAlignment.Center,border=name=="Surface" || name=="Border"?Vector4.one*32:Vector4.zero}).ToArray();
+            importer.spritesheet=Names.Select((name,i)=>new SpriteMetaData{name=name,rect=new Rect(i%8*128,512-(i/8+1)*128,128,128),pivot=new Vector2(.5f,.5f),alignment=(int)SpriteAlignment.Center,border=name=="Surface" || name=="Border" || name=="HandleBorder"?Vector4.one*32:Vector4.zero}).ToArray();
             importer.SaveAndReimport();
             #pragma warning restore CS0618
         }
@@ -63,7 +63,7 @@ namespace RemixTable.Editor
             if(Resources.LoadAll<Sprite>("RemixUiAtlas").Length!=Names.Length)throw new InvalidOperationException("Missing atlas sprites");
             if(Graphic.defaultGraphicMaterial==null || ShaderUtil.ShaderHasError(Graphic.defaultGraphicMaterial.shader))throw new InvalidOperationException("UI material/shader invalid");
             foreach(var root in view.gameObject.scene.GetRootGameObjects())foreach(var t in root.GetComponentsInChildren<Transform>(true))if(t.GetComponents<Component>().Any(c=>c==null))throw new InvalidOperationException("Missing scene script: "+t.name);
-            Debug.Log("ICON_UI_REFERENCE_VALIDATION_PASS buttons=45 sprites=29");
+            Debug.Log("ICON_UI_REFERENCE_VALIDATION_PASS buttons=45 sprites="+Names.Length);
             Directory.CreateDirectory("Logs");
             File.WriteAllLines("Logs/IconUiInventory.txt",view.controls.OrderBy(c=>c.role).Select(c=>$"{c.role} | {c.semanticName} | {c.iconKey} | numeric={c.numeric} | persistentActions={c.button.onClick.GetPersistentEventCount()}"));
         }
@@ -80,7 +80,7 @@ namespace RemixTable.Editor
             camera.orthographic=true;camera.orthographicSize=.55f;camera.aspect=1.6f;camera.nearClipPlane=.01f;camera.farClipPlane=10;camera.clearFlags=CameraClearFlags.SolidColor;camera.backgroundColor=new Color(.018f,.020f,.035f);
             Canvas.ForceUpdateCanvases();Capture(camera,"Logs/IconUiWorkspace.png");
             var filter=ui.controls.Single(c=>c.role=="FilterMode");filter.OnPointerEnter(null);filter.Paint();ui.tooltip.Advance(.61f);Canvas.ForceUpdateCanvases();Capture(camera,"Logs/IconUiHoverTooltip.png");filter.OnPointerExit(null);filter.Paint();
-            var palm=manager.palmMenuCanvas;palm.gameObject.SetActive(true);camera.transform.position=palm.transform.TransformPoint(new Vector3(0,0,-1000));camera.transform.rotation=palm.transform.rotation;camera.orthographicSize=.25f;Canvas.ForceUpdateCanvases();Capture(camera,"Logs/IconUiPalm.png");
+            var panel=manager.workspaceInteraction.masterVolumePanel;panel.SetActive(true);Canvas.ForceUpdateCanvases();Capture(camera,"Logs/WorkspaceControlsPreview.png");
             Object.DestroyImmediate(go);
         }
         public static void ApplyAndPreview(){Apply();Preview();}

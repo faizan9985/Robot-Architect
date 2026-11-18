@@ -50,9 +50,9 @@ namespace RemixTable
                 case "RoomTool":iconKey="Room";semanticName="Passthrough";break;
                 case "MicTool":iconKey="Voice";semanticName="Voice";break;
                 case "ResetTool":iconKey="Reset";semanticName="Reset All (Undo restores)";break;
+                case "RecenterTool":iconKey="Recenter";semanticName="Recenter workspace";break;
+                case "MasterVolumeTool":iconKey="Volume";semanticName="Master Volume / Help";break;
                 case "Undo":case "Redo":iconKey=role;break;
-                case "Open Menu Button":iconKey="Tools";semanticName="Open palm controls";break;
-                case "Close Button":iconKey="Close";semanticName="Close palm controls";break;
                 case "Speed":semanticName="Playback speed";break;
                 case "Zoom":semanticName="Timeline zoom";break;
             }
@@ -99,6 +99,7 @@ namespace RemixTable
                 case "SnapTool":return m.snapToBeat;
                 case "LoopTool":return audio!=null && audio.LoopActive;
                 case "SpatialTool":return m.mix.spatial;
+                case "MasterVolumeTool":return m.workspaceInteraction!=null && m.workspaceInteraction.PanelVisible;
                 case "RecordTool":return toolbox!=null && toolbox.recorder!=null && toolbox.recorder.Recording;
                 case "RoomTool":return toolbox!=null && toolbox.passthrough is IRemixToggle p && p.IsOn;
                 case "MicTool":return toolbox!=null && toolbox.voice is IRemixToggle v && v.IsOn;

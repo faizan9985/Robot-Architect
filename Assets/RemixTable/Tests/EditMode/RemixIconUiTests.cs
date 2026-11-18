@@ -23,15 +23,12 @@ namespace RemixTable.Tests
             foreach(var c in ui.controls)
             {
                 Assert.IsNotEmpty(c.semanticName);Assert.AreSame(c.button.GetComponent<Image>(),c.button.targetGraphic);
-                if(c.role!="Open Menu Button" && c.role!="Close Button")
-                {
-                    Assert.AreEqual(1,c.button.onClick.GetPersistentEventCount(),c.role);Assert.NotNull(c.button.onClick.GetPersistentTarget(0));Assert.IsNotEmpty(c.button.onClick.GetPersistentMethodName(0));
-                }
+                Assert.AreEqual(1,c.button.onClick.GetPersistentEventCount(),c.role);Assert.NotNull(c.button.onClick.GetPersistentTarget(0));Assert.IsNotEmpty(c.button.onClick.GetPersistentMethodName(0));
                 if(!c.numeric){Assert.NotNull(c.icon.sprite);Assert.IsFalse(c.icon.raycastTarget);if(c.sourceLabel!=null)Assert.IsFalse(c.sourceLabel.enabled);}
             }
             var mix=manager.workspace.GetComponentInChildren<RemixMixControls>(true);
             foreach(var buttons in new[]{mix.muteButtons,mix.soloButtons,mix.clearButtons}){Assert.AreEqual(4,buttons.Length);Assert.IsTrue(buttons.All(b=>b!=null && b.GetComponent<RemixIconButton>()!=null));}
-            Assert.NotNull(manager.palmMenuCanvas.GetComponentInChildren<Slider>(true));Assert.NotNull(manager.palmMenuCanvas.GetComponentInChildren<Toggle>(true));
+            Assert.NotNull(manager.workspaceInteraction.masterVolumePanel.GetComponentInChildren<Slider>(true));Assert.NotNull(manager.workspace.GetComponentInChildren<RemixToolbox>(true).passthroughButton);Assert.IsFalse(Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include,FindObjectsSortMode.None).Any(c=>c.GetType().Name=="HandMenuController"));
         }
         [Test] public void NumericLabelsAndAnimatedToolbarArePreserved()
         {
@@ -44,7 +41,7 @@ namespace RemixTable.Tests
         }
         [Test] public void IconsUseSingleAtlasAndRoundedBackgroundsKeepFullRectTargets()
         {
-            var sprites=Resources.LoadAll<Sprite>("RemixUiAtlas");Assert.AreEqual(29,sprites.Length);Assert.AreEqual(1,sprites.Select(s=>s.texture).Distinct().Count());
+            var sprites=Resources.LoadAll<Sprite>("RemixUiAtlas");Assert.AreEqual(31,sprites.Length);Assert.AreEqual(1,sprites.Select(s=>s.texture).Distinct().Count());
             foreach(var c in ui.controls)
             {
                 var image=(Image)c.button.targetGraphic;Assert.AreEqual(Image.Type.Sliced,image.type);Assert.AreEqual(0,image.alphaHitTestMinimumThreshold);Assert.IsTrue(image.raycastTarget);

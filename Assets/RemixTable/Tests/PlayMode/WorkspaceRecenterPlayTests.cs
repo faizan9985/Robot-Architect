@@ -24,7 +24,7 @@ namespace RemixTable.Tests
             var transport=root.GetComponentInChildren<RemixTransport>();
             var controls=root.GetComponentsInChildren<Transform>(true);
             var locals=new Vector3[controls.Length];for(int i=0;i<locals.Length;i++)locals[i]=controls[i].localPosition;
-            var palmParent=manager.palmMenuCanvas.transform.parent;
+            var palmParent=manager.workspaceInteraction.masterVolumePanel.transform.parent;
             var head=new Pose(manager.workspaceCamera.transform.position,Quaternion.Euler(0,60,0));
             void Align(int count)
             {
@@ -53,7 +53,7 @@ namespace RemixTable.Tests
                 Assert.AreEqual(0,audio.EditingPauseCount);Assert.IsTrue(manager.clock.playing);
                 Assert.AreEqual(start,edit.start);Assert.AreEqual(end,edit.end);Assert.AreEqual(value,edit.value);
                 for(int i=0;i<locals.Length;i++) if(controls[i]!=root) Assert.AreEqual(locals[i],controls[i].localPosition,controls[i].name);
-                Assert.AreSame(palmParent,manager.palmMenuCanvas.transform.parent);
+                Assert.AreSame(palmParent,manager.workspaceInteraction.masterVolumePanel.transform.parent);
                 Assert.That(root.position.y,Is.EqualTo(head.position.y-manager.design.workspaceEyeDrop).Within(.00001));
                 yield return new WaitForSeconds(.3f);
                 foreach(var source in audio.sources) Assert.IsTrue(source.isPlaying);

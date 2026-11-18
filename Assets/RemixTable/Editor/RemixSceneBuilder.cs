@@ -91,8 +91,8 @@ namespace RemixTable.Editor
             Require(All<XRInteractionManager>(scene).Count(x=>x.isActiveAndEnabled)==1,"one active interaction manager");
             var origin=All<XROrigin>(scene).Single();
             Require(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(origin.gameObject).EndsWith("XR Origin Hands (XR Rig).prefab"),"hands prefab connection");
-            var menu=All<HandMenuController>(scene).Single();var data=new SerializedObject(menu);
-            foreach(var field in new[]{"xrCamera","trackingSpace","passthrough","launcherCanvas","menuCanvas","openButton","closeButton","passthroughToggle","passthroughLabel","volumeControl"}) Require(data.FindProperty(field).objectReferenceValue!=null,"palm reference "+field);
+            Require(All<HandMenuController>(scene).Length==0,"no hand menu activation in Remix Table");
+            RemixWorkspaceLayout.Validate();
             Require(All<UnityEngine.XR.ARFoundation.ARSession>(scene).Length==1,"one AR session");
             var pass=new SerializedObject(All<PassthroughController>(scene).Single());
             Require(pass.FindProperty("xrCamera").objectReferenceValue==origin.Camera,"passthrough camera");
@@ -116,7 +116,7 @@ namespace RemixTable.Editor
                 }
             }
             Require(!scene.GetRootGameObjects().Any(x=>x.name=="RobotArchitect"),"gameplay removed from duplicate");
-            Debug.Log("REMIX_VALIDATION_PASS: scene, XR prefab, palm, passthrough, ribbons, songs and serialized references.");
+            Debug.Log("REMIX_VALIDATION_PASS: scene, XR prefab, workspace controls, passthrough, ribbons, songs and serialized references.");
         }
         public static void Require(bool condition,string message) {if(!condition)throw new Exception("REMIX_CHECK_FAILED: "+message);}
     }

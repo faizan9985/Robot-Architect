@@ -42,6 +42,7 @@ namespace RemixTable
         bool alignmentReleaseRequired;
         float zoomStartDistance, zoomStartWindow;
         public bool ZoomReleaseRequired => zoomReleaseRequired;
+        public bool GestureReleaseRequired => zoomReleaseRequired || alignmentReleaseRequired;
         // Live filter readout for the transport UI: -1 = full low-pass, +1 = full high-pass.
         public bool IsFiltering => active!=null && effectEdit!=null;
         public float FilterEffect => effectEdit!=null ? effectEdit.value : 0;
@@ -72,12 +73,19 @@ namespace RemixTable
             SubsystemManager.GetSubsystems(systems);
             XRHandSubsystem system = null;
             foreach (var s in systems) if (s.running) { system=s; break; }
-            if (system == null) { Cancel(); return; }
+            if (system == null)
+            {
+                FinishGesture(true);
+                if(manager.workspaceInteraction!=null && manager.workspaceInteraction.State==RemixWorkspaceInteraction.Ownership.VerticalScale)manager.workspaceInteraction.CancelOwnedGesture();
+                return;
+            }
             ProcessHands(Read(system.leftHand,hands[0].pinch),Read(system.rightHand,hands[1].pinch),Time.unscaledDeltaTime);
         }
         // The XR adapter and deterministic tests feed the same gesture path. Positions are world space.
         public void ProcessHands(HandSample left, HandSample right, float deltaTime)
         {
+            if(manager.workspaceInteraction!=null && manager.workspaceInteraction.ProcessHands(left,right,deltaTime,VisualUiBlocked(0) || VisualUiBlocked(1)))
+            {hands[0]=left;hands[1]=right;ClearContactGlows();return;}
             ProcessInteraction(left,right,deltaTime);
             UpdateContactGlows(left,right,deltaTime);
         }
@@ -137,7 +145,7 @@ namespace RemixTable
             bool blocked=manager.WorkspaceAligning || (manager.anchored && !manager.WorkspaceTracked) || alignmentReleaseRequired || zoomReleaseRequired || manager.ExternalHold ||
                 State==GestureState.ZoomPending || State==GestureState.Zooming ||
                 (manager.navigationToolbar!=null && manager.navigationToolbar.MenusVisible) ||
-                (manager.palmMenuCanvas!=null && manager.palmMenuCanvas.gameObject.activeInHierarchy);
+                (manager.workspaceInteraction!=null && manager.workspaceInteraction.PanelVisible);
             for(int h=0;h<2;h++)
             {
                 var sample=h==0?left:right;
@@ -171,7 +179,7 @@ namespace RemixTable
             {
                 if(!left.valid || !right.valid || !left.pinch || !right.pinch || manager.IsEditing ||
                     (manager.navigationToolbar!=null && manager.navigationToolbar.MenusVisible) ||
-                    (manager.palmMenuCanvas!=null && manager.palmMenuCanvas.gameObject.activeInHierarchy)) { Cancel(); return; }
+                    (manager.workspaceInteraction!=null && manager.workspaceInteraction.PanelVisible)) { Cancel(); return; }
                 float distance=Vector3.Distance(left.position,right.position);
                 if(State==GestureState.ZoomPending && Mathf.Abs(distance-zoomStartDistance)<manager.design.zoomMovementThreshold) return;
                 State=GestureState.Zooming;
@@ -190,7 +198,7 @@ namespace RemixTable
                 {
                     if(manager.design.curvedTimeline && !manager.IsEditing && left.valid && right.valid && left.pinch && right.pinch &&
                         (manager.navigationToolbar==null || !manager.navigationToolbar.MenusVisible) &&
-                        (manager.palmMenuCanvas==null || !manager.palmMenuCanvas.gameObject.activeInHierarchy) && InZoomWorkspace(left.position) && InZoomWorkspace(right.position))
+                        (manager.workspaceInteraction==null || !manager.workspaceInteraction.PanelVisible) && InZoomWorkspace(left.position) && InZoomWorkspace(right.position))
                     {
                         zoomStartDistance=Vector3.Distance(left.position,right.position);
                         if(zoomStartDistance>=.12f)
@@ -354,7 +362,7 @@ namespace RemixTable
             if(active!=null || State==GestureState.ZoomPending || State==GestureState.Zooming || (manager!=null && manager.ExternalHold)) alignmentReleaseRequired=true;
             Cancel();
         }
-        public void Cancel() => FinishGesture(true);
+        public void Cancel() {FinishGesture(true);if(manager!=null && manager.workspaceInteraction!=null)manager.workspaceInteraction.CancelOwnedGesture();}
         void FinishGesture(bool clearVisuals) { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) { if(!active.wholeStem && (gainEdit!=null || effectEdit!=null || pitchEdit!=null)) { HasLastRegion=true;LastRegionStart=active.regionStart;LastRegionEnd=active.regionEnd; } active.SetSelected(false); if(manager!=null) manager.history.EndGesture(manager.automation); }active=null;State=GestureState.Idle;gainEdit=effectEdit=pitchEdit=null;hands[0]=hands[1]=default;if(clearVisuals)ClearContactGlows(); }
         void OnDisable() {Cancel();ReleaseVisualUi();}
         void OnDestroy() => ReleaseVisualUi();

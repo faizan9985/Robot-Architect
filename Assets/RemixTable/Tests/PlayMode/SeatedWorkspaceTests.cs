@@ -37,8 +37,8 @@ namespace RemixTable.Tests
             Assert.That(manager.audioManager.sources[(int)StemId.Bass].volume,Is.EqualTo(manager.audioManager.headroom*.4f).Within(.001));
             transport.playPause.onClick.Invoke();transport.nextSong.onClick.Invoke();transport.previousSong.onClick.Invoke();
             Assert.IsTrue(manager.audioManager.IsManuallyPaused);Assert.IsFalse(manager.clock.playing);
-            Assert.AreEqual(1,manager.automation.edits.Count);Assert.IsFalse(transport.palmInstructions.gameObject.activeInHierarchy);
-            Assert.IsFalse(transport.palmInstructions.transform.IsChildOf(manager.workspace));
+            Assert.AreEqual(1,manager.automation.edits.Count);Assert.IsFalse(transport.workspaceInstructions.gameObject.activeInHierarchy);
+            Assert.IsTrue(transport.workspaceInstructions.transform.IsChildOf(manager.workspace));
             // Include extreme historic deformations in the geometry-bounds check.
             foreach(var r in manager.ribbons){manager.automation.Upsert(new AutomationEdit{songId=manager.library.Current.id,stem=r.stem,parameter=ParameterType.Pitch,wholeStem=true,value=12});r.wholeStem=true;r.SetSelected(true);}
             yield return null;

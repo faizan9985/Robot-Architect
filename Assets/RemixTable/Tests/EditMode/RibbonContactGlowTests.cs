@@ -112,7 +112,7 @@ namespace RemixTable.Tests
         {
             Tick(Hand(3,0,true));gestures.Cancel();Assert.AreEqual(Vector4.zero,Input(3));
             Tick(Hand(3,0,true));Tick(default);Assert.AreEqual(Vector4.zero,Input(3));
-            Tick(Hand(3));var menu=new GameObject("palm menu",typeof(Canvas));menu.transform.SetParent(root.transform);manager.palmMenuCanvas=menu.GetComponent<Canvas>();
+            Tick(Hand(3));var menu=new GameObject("workspace volume panel",typeof(Canvas));menu.transform.SetParent(root.transform);manager.workspaceInteraction=root.AddComponent<RemixWorkspaceInteraction>();manager.workspaceInteraction.manager=manager;manager.workspaceInteraction.masterVolumePanel=menu;
             Tick(Hand(3));Assert.AreEqual(Vector4.zero,Input(3));menu.SetActive(false);
             Tick(Hand(3));manager.BeginExternalHold(root);Assert.AreEqual(Vector4.zero,Input(3));Tick(Hand(3));Assert.AreEqual(Vector4.zero,Input(3));manager.EndExternalHold(root);
             Tick(Hand(3,0,true));manager.RequestWorkspaceAlignment();Assert.AreEqual(Vector4.zero,Input(3));Assert.IsNull(gestures.ActiveRibbon);
