@@ -69,9 +69,9 @@ namespace RemixTable
             // Mixer audibility is the ceiling; solo follows StemMix's existing solo-wins-over-mute rule.
             float baseLevel=audible?(soloed?1.08f:1):.22f;
             float hover=HoverAmount*(1-GrabAmount);
-            CoreIntensity=baseLevel*(1+.65f*GrabAmount+.10f*hover);
-            RimIntensity=baseLevel*(.70f+.80f*GrabAmount+.25f*hover);
-            HaloIntensity=(audible?.35f:.10f)*(1+GrabAmount+hover*.25f)*(soloed && audible?1.08f:1);
+            CoreIntensity=baseLevel*(1+6.5f*GrabAmount+.50f*hover);
+            RimIntensity=baseLevel*(.70f+8.0f*GrabAmount+1.25f*hover);
+            HaloIntensity=(audible?.35f:.10f)*(1+10f*GrabAmount+hover*1.25f)*(soloed && audible?1.08f:1);
             HaloExpansion=1.14f+.08f*GrabAmount+.025f*hover;
             block.SetFloat(CoreId,CoreIntensity);block.SetFloat(RimId,RimIntensity);
             block.SetFloat(HaloId,HaloIntensity);block.SetFloat(ExpansionId,HaloExpansion);
