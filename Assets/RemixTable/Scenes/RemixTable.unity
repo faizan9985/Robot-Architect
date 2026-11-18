@@ -15295,7 +15295,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: MORE SONGS COMING SOON
+  m_text: PICK A TRACK TO SCULPT
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -30208,52 +30208,75 @@ MonoBehaviour:
       label: vocals
       clip: {fileID: 8300000, guid: aa36c84e33978424ca8fb295102e0b20, type: 3}
       waveform: {fileID: 7732546199605420221, guid: 062db725c97a7664581afe73070e8650, type: 3}
-  - id: glass-orbit
-    title: GLASS ORBIT
-    duration: 40
-    bpm: 96
-    beatOffset: 0
-    seed: 7
+  - id: on-and-on
+    title: On & On
+    duration: 208.02757
+    bpm: 174
+    beatOffset: 0.2523
+    seed: 13
     stems:
     - id: 0
-      label: Drums
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: drums
+      clip: {fileID: 8300000, guid: 47e06c8c38a48a64aa5b4fcb801f2514, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 8bf751c84830d3c449ce5e4035e6ccdb, type: 3}
     - id: 1
-      label: Bass
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: bass
+      clip: {fileID: 8300000, guid: 7ca834b0038a9e4438a3cefc58ab3c26, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: b7ca693119094664b9c9aff2c94a2d0b, type: 3}
     - id: 2
-      label: Melody
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: other
+      clip: {fileID: 8300000, guid: 940ad1c57efe6d94a95d0766247a1941, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: ca632adfb23216b4e98bdfab6e7e1239, type: 3}
     - id: 3
-      label: Vocals
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
-  - id: violet-dawn
-    title: VIOLET DAWN
-    duration: 48
-    bpm: 124
-    beatOffset: 0
-    seed: 11
+      label: vocals
+      clip: {fileID: 8300000, guid: 2801f22ebc8c1c243a87aa715060a351, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: c742aaeb1a391a04cb0ae11f162ea240, type: 3}
+  - id: heroes-tonight
+    title: Heroes Tonight
+    duration: 208.09723
+    bpm: 128
+    beatOffset: 0.0891
+    seed: 17
     stems:
     - id: 0
-      label: Drums
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: drums
+      clip: {fileID: 8300000, guid: 171a7577c0b791a4b88577b1a9a3a734, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 82c8f53a8b37f7947856356dd0ad8f97, type: 3}
     - id: 1
-      label: Bass
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: bass
+      clip: {fileID: 8300000, guid: f18452e6624fe5c46ad015cd4993440d, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: fc5d225e295623a47bee70660d22fa88, type: 3}
     - id: 2
-      label: Melody
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: other
+      clip: {fileID: 8300000, guid: 6ae248de226658047b4d582abe57f191, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 58f3261b8874e0f4db5f5f9555e1997b, type: 3}
     - id: 3
-      label: Vocals
-      clip: {fileID: 0}
-      waveform: {fileID: 0}
+      label: vocals
+      clip: {fileID: 8300000, guid: abaabe5e27ed6924db64bf4bf1a00372, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: c7641c157d6421d4bb8a35a49436810c, type: 3}
+  - id: mortals
+    title: Mortals
+    duration: 229.97043
+    bpm: 90
+    beatOffset: 0.2772
+    seed: 19
+    stems:
+    - id: 0
+      label: drums
+      clip: {fileID: 8300000, guid: 054d644ae6da0204fbbd1224a28c1ff8, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 42f74b75586fe7b479622e7be240022b, type: 3}
+    - id: 1
+      label: bass
+      clip: {fileID: 8300000, guid: ea4236fc2c081c54fa09c0543ee12c7d, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: f5c1f9358f098ba4ba2f78ced4371b46, type: 3}
+    - id: 2
+      label: other
+      clip: {fileID: 8300000, guid: d0e24d8a5e30f304ead2c8bdadb34f6a, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: 717760140f96d264b8a890b286326184, type: 3}
+    - id: 3
+      label: vocals
+      clip: {fileID: 8300000, guid: d9e3883aef4379945b8811d318bf7c72, type: 3}
+      waveform: {fileID: 7732546199605420221, guid: c2a85b3976bd1d34aaa8cdb30f01de66, type: 3}
   selectedIndex: 0
   skipSilentSongs: 1
 --- !u!4 &1747873706

@@ -77,7 +77,7 @@ namespace RemixTable.Editor
             var songs = Page(root, "SongsPage");
             menu.songsPage = songs;
             Heading(songs, "SELECT SONG", font);
-            Text(songs, "Hint", "MORE SONGS COMING SOON", new Vector2(0, 112), new Vector2(680, 22), 12, font, Muted).characterSpacing = 4;
+            Text(songs, "Hint", "PICK A TRACK TO SCULPT", new Vector2(0, 112), new Vector2(680, 22), 12, font, Muted).characterSpacing = 4;
             menu.songList = RemixSeatedLayout.Rect(songs, "SongList", Vector2.zero, MenuSize * 1000);
             var template = Pill(menu.songList, "SongTemplate", "01    SONG", new Vector2(0, 66), new Vector2(540, 52), 18, font, Style.Row);
             var songTitle = template.transform.Find("Label") as RectTransform;

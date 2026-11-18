@@ -207,16 +207,17 @@ namespace RemixTable
                 var song = songs[i];
                 bool playable = SongLibraryManager.HasAudio(song), current = i == manager.library.selectedIndex;
                 b.interactable = playable;
-                var labels = b.GetComponentsInChildren<TMP_Text>(true);
-                if (labels.Length > 0) { labels[0].text = $"{i + 1:00}    {song.title}"; labels[0].alpha = playable ? 1 : .4f; }
-                if (labels.Length > 1)
+                var title = b.transform.Find("Label")?.GetComponent<TMP_Text>();
+                var status = b.transform.Find("Status")?.GetComponent<TMP_Text>();
+                if (title != null) { title.text = $"{i + 1:00}    {song.title}"; title.alpha = playable ? 1 : .4f; }
+                if (status != null)
                 {
-                    labels[1].text = !playable ? "COMING SOON" : current ? "NOW LOADED" : $"{Mathf.RoundToInt(song.bpm)} BPM  ·  {Clock(Length(song))}";
-                    labels[1].alpha = playable ? 1 : .45f;
+                    status.text = !playable ? "COMING SOON" : current ? "NOW LOADED" : $"{Mathf.RoundToInt(song.bpm)} BPM  ·  {Clock(Length(song))}";
+                    status.alpha = playable ? 1 : .45f;
                 }
                 var image = b.GetComponent<Image>(); // The fill; the hover ring is the button's target graphic.
                 if (image != null) image.color = current ? RowCurrent : playable ? RowFill : RowLocked;
-                Place(b, ((RectTransform)b.transform).anchoredPosition, templateRect.sizeDelta);
+                Place(b, ((RectTransform)b.transform).anchoredPosition, templateRect.sizeDelta, resizeLabel: false); // Row labels keep their own title/status layout.
             }
         }
         public void SelectSong(int index)
@@ -278,12 +279,12 @@ namespace RemixTable
         public const float PrimaryY = -40, ContinueDetailY = -84, PlayWithContinueY = -126, SecondaryY = -132, SecondaryWithContinueY = -196, SecondaryGap = 122;
         public static readonly Vector2 PrimarySize = new Vector2(300, 72), SecondarySize = new Vector2(224, 52);
         // Sizes a pill button and keeps its corners fully round.
-        public static void Place(Button button, Vector2 position, Vector2 size)
+        public static void Place(Button button, Vector2 position, Vector2 size, bool resizeLabel = true)
         {
             var r = (RectTransform)button.transform;
             r.anchoredPosition = position; r.sizeDelta = size;
             var label = button.transform.Find("Label") as RectTransform;
-            if (label != null) label.sizeDelta = size - new Vector2(16, 6);
+            if (label != null && resizeLabel) label.sizeDelta = size - new Vector2(16, 6);
             foreach (var image in button.GetComponentsInChildren<Image>(true))
             {
                 if (image.sprite == null || image.type != Image.Type.Sliced || image.sprite.border.y <= 0) continue;

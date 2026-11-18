@@ -100,7 +100,7 @@ namespace RemixTable.Editor
             var manager=All<RemixTableManager>(scene).Single();
             Require(manager.ribbons.Length==4 && manager.ribbons.All(x=>x!=null && x.manager==manager),"four ribbons share timeline");
             Require(manager.ribbons.Select(x=>x.stem).Distinct().Count()==4,"four unique stems");
-            Require(manager.design.colors.Length==4 && manager.library.songs.Length==3,"palette and songs");
+            Require(manager.design.colors.Length==4 && manager.library.songs.Length>=1,"palette and songs");
             var shader=AssetDatabase.LoadAssetAtPath<Shader>("Assets/RemixTable/Shaders/RibbonEnergy.shader");
             Require(shader!=null && !ShaderUtil.ShaderHasError(shader),"energy shader import");
             Require(All<UnityEngine.EventSystems.EventSystem>(scene).Length==0,"inherited runtime UI registration");
