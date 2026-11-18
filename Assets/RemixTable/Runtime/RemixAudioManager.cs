@@ -35,6 +35,14 @@ namespace RemixTable
             if(manager!=null && Ready) manager.clock.elapsed=Position(now);
             return true;
         }
+        // Main menu is open: the song stays paused underneath it (a song picked from the menu loads paused too).
+        // Independent of the PAUSE button, so closing the menu restores whatever the listener had chosen.
+        bool menuHold;
+        public bool MenuHold
+        {
+            get => menuHold;
+            set { if (menuHold == value) return; menuHold = value; ApplyPlaybackState(); }
+        }
         // EDIT (default): holding a ribbon pauses the song while you shape it.
         // LIVE: playback keeps running while you edit, so changes are heard as the song plays.
         [SerializeField] bool liveMode;
@@ -164,7 +172,7 @@ namespace RemixTable
         }
         void ApplyPlaybackState()
         {
-            if (manualPaused || suspended || (!liveMode && editingOwners.Count > 0)) PauseTransport();
+            if (manualPaused || suspended || menuHold || (!liveMode && editingOwners.Count > 0)) PauseTransport();
             else ResumeTransport();
         }
         readonly float[] samples = new float[128];
@@ -238,6 +246,7 @@ namespace RemixTable
         }
         public void Load(SongMetadata song)
         {
+            bool keepPause = menuHold && manualPaused;
             Stop();
             if (sources == null || sources.Length != 4 || song.stems == null) return;
             IsolateStemSources();
@@ -266,7 +275,8 @@ namespace RemixTable
             EnsureFilters();
             for (int i = 0; i < sources.Length; i++) { ApplyFilter(i, 0); ApplyPitch(i, 0); pans[i] = 0; }
             Ready = true;
-            Resume();
+            manualPaused = keepPause;
+            ApplyPlaybackState();
         }
         public void Pause()
         {

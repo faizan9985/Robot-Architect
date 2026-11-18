@@ -51,6 +51,7 @@ namespace RemixTable.Tests
         [UnityTest] public IEnumerator SavedSceneZoomKeepsAudioRunningAndFreezesDuringEditing()
         {
             #if UNITY_EDITOR
+            RemixMainMenu.OpenOnStart=false; // Start on the table, not the main menu.
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode("Assets/RemixTable/Scenes/RemixTable.unity",new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
             #endif
             yield return new WaitForSeconds(2);

@@ -43,6 +43,7 @@ namespace RemixTable
             var buttons=new List<RemixIconButton>();
             foreach(var root in gameObject.scene.GetRootGameObjects())foreach(var b in root.GetComponentsInChildren<Button>(true))
             {
+                if(b.GetComponentInParent<RemixMainMenu>(true)!=null || b.GetComponentInParent<RemixVibes>(true)!=null || b.GetComponentInParent<RemixDailyDrop>(true)!=null || b.name=="Menu" || b.name=="OpenMenu")continue;
                 var view=b.GetComponent<RemixIconButton>();if(view==null)view=b.gameObject.AddComponent<RemixIconButton>();
                 view.Initialize(this,b);buttons.Add(view);
             }
@@ -54,6 +55,7 @@ namespace RemixTable
             }
             foreach(var root in gameObject.scene.GetRootGameObjects())foreach(var image in root.GetComponentsInChildren<Image>(true))
             {
+                if(image.GetComponentInParent<RemixMainMenu>(true)!=null)continue;
                 if(image.GetComponent<Button>()!=null || image.GetComponentInParent<RemixIconButton>()!=null || image.GetComponentInParent<RemixUiTooltip>()!=null)continue;
                 if(image.GetComponent<Canvas>()!=null || image.name=="Panel" || image.name=="Content" || image.name=="Background")
                 {

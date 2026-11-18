@@ -79,7 +79,7 @@ namespace RemixTable.Editor
             var room=RemixSceneBuilder.All<RemixPassthroughToggle>(manager.gameObject.scene).Single();
             if(new SerializedObject(room).FindProperty("passthrough").objectReferenceValue!=pass)throw new InvalidOperationException("Tools passthrough controller must survive palm removal");
             if(!c.playhead.transform.IsChildOf(c.waveformRoot) || manager.ribbons.Any(r=>r.transform.parent!=c.waveformRoot))throw new InvalidOperationException("Vertical geometry root invalid");
-            if(c.uiCanvases.Length!=6 || c.uiCanvases.Any(canvas=>canvas.transform.IsChildOf(c.waveformRoot)))throw new InvalidOperationException("UI must stay unscaled");
+            if(c.uiCanvases.Length!=10 || c.uiCanvases.Distinct().Count()!=10 || c.uiCanvases.Except(manager.workspace.GetComponentsInChildren<Canvas>(true)).Any() || c.uiCanvases.Any(canvas=>canvas.transform.IsChildOf(c.waveformRoot)))throw new InvalidOperationException("UI must stay unscaled");
             if(!RemixSceneBuilder.All<SpatialStemField>(manager.gameObject.scene).Single().transform.IsChildOf(manager.workspace))throw new InvalidOperationException("Spatial field must move with root");
             RemixUiLayout.Validate();Debug.Log("WORKSPACE_INTERACTION_VALIDATION_PASS");
         }

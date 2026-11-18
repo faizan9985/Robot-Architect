@@ -36,7 +36,6 @@ namespace RemixTable
                 float denominator = a - 2 * b + c;
                 if (Mathf.Abs(denominator) > 1e-12f) refined += Mathf.Clamp(.5f * (a - c) / denominator, -.5f, .5f);
             }
-            result.bpm = frameRate * 60 / refined;
             float mean = total / Mathf.Max(1, maxLag - minLag + 1);
             result.confidence = best > 0 ? Mathf.Clamp01(1 - mean / best) : 0;
             // Refine tempo and phase together. A rounded autocorrelation lag can be close in BPM
@@ -65,6 +64,17 @@ namespace RemixTable
             float beatSeconds = period * Hop / sampleRate;
             result.offset = Mathf.Repeat((bestPhase * Hop + Frame - Hop * .5f) / sampleRate, beatSeconds);
             return result;
+        }
+        // Mean onset strength sampled on a beat grid (linear interpolation between frames).
+        static float Comb(float[] onset, int frames, float phase, float period)
+        {
+            double sum = 0; int count = 0;
+            for (float f = phase; f < frames - 1; f += period)
+            {
+                int i = (int)f; float t = f - i;
+                sum += onset[i] * (1 - t) + onset[i + 1] * t; count++;
+            }
+            return count == 0 ? 0 : (float)(sum / count);
         }
         static float[] OnsetEnvelope(float[] mono, out int frames)
         {

@@ -12,10 +12,18 @@ namespace RemixTable.Tests
         [UnityTest] public IEnumerator SavedWorkspaceTransportAndPalmPreserveAudioAndEditing()
         {
             #if UNITY_EDITOR
+            RemixMainMenu.OpenOnStart=false; // Start on the table, not the main menu.
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode("Assets/RemixTable/Scenes/RemixTable.unity",new UnityEngine.SceneManagement.LoadSceneParameters(UnityEngine.SceneManagement.LoadSceneMode.Single));
             #endif
             yield return new WaitForSeconds(2);
             var manager=Object.FindFirstObjectByType<RemixTableManager>();var transport=Object.FindFirstObjectByType<RemixTransport>();
+            manager.library.skipSilentSongs=false; // Exercise unavailable audio with an explicit fixture, not a real song.
+            var fixtureSongs=new System.Collections.Generic.List<SongMetadata>(manager.library.songs);
+            fixtureSongs.Insert(1,new SongMetadata{id="silent-transport-fixture",title="Silent transport fixture",duration=32});
+            manager.library.songs=fixtureSongs.ToArray();
+            // Start from a clean remix and never write the test's edits into the real save folder.
+            var persistence=manager.GetComponent<RemixPersistence>();if(persistence!=null) persistence.enabled=false;
+            manager.automation.edits.Clear();manager.mix.CopyFrom(null);
             Assert.IsTrue(manager.anchored);Assert.IsTrue(manager.audioManager.Ready);
             Assert.AreEqual(1,Object.FindObjectsByType<EventSystem>(FindObjectsSortMode.None).Length);
             Assert.AreEqual(1,Object.FindObjectsByType<XRUIInputModule>(FindObjectsSortMode.None).Length);

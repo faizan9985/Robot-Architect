@@ -57,9 +57,14 @@ namespace RemixTable.Editor
                 "Assets/Resources/VocalsHolographicHalo.mat","Assets/Resources/StemHolographicBody.mat",
                 "Assets/Resources/StemHolographicHalo.mat","Assets/RemixTable/Shaders/VocalsHolographic.shader",
                 "Assets/Resources/SpatialHolographicCore.mat","Assets/Resources/SpatialHolographicHalo.mat",
-                "Assets/RemixTable/Shaders/SpatialHolographic.shader","Assets/Resources/RemixUiAtlas.png"})
-                if(!packed.Contains(path)) throw new BuildFailedException("Vocals asset missing from player: "+path);
+                "Assets/RemixTable/Shaders/SpatialHolographic.shader","Assets/Resources/RemixUiAtlas.png"}
+                .Concat(RemixSongSetup.Songs.SelectMany(song=>new[]{"drums","bass","other","vocals"}.SelectMany(stem=>new[]{
+                    $"Assets/RemixTable/Audio/{song.folder}/Stems/{stem}.wav",$"Assets/RemixTable/Waveforms/{song.folder}/{stem}.rwave"})))
+                .Concat(new[]{"Assets/RemixTable/Materials/MenuAura.mat","Assets/RemixTable/Materials/RoomGlow.mat",
+                    "Assets/RemixTable/Shaders/MenuAura.shader","Assets/RemixTable/Shaders/RoomGlow.shader","Assets/RemixTable/Voice/RemixWitConfig.asset"}))
+                if(!packed.Contains(path)) throw new BuildFailedException("Remix asset missing from player: "+path);
             File.WriteAllLines("Logs/VocalsPackedAssets.txt",packed.Where(p=>p.Contains("VocalsHolographic") || p.Contains("StemHolographic") || p.Contains("SpatialHolographic") || p.Contains("RemixUiAtlas")));
+            File.WriteAllLines("Logs/IntegrationPackedAssets.txt",packed.Distinct().OrderBy(path=>path));
             Debug.Log("VOCALS_PACKED_ASSET_VALIDATION_PASS");
             Debug.Log("VOCALS_QUEST_BUILD_PASS bytes="+report.summary.totalSize);
         }

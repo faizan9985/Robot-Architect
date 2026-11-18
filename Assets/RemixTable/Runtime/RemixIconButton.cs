@@ -116,8 +116,11 @@ namespace RemixTable
             if(presentation==null || button==null)return;
             Selected=Active();bool enabled=button.IsInteractable();bool down=pressed || Time.unscaledTime<pressedUntil;
             Color surface=!enabled?new Color(.035f,.03f,.05f,.60f):down?new Color(.24f,.17f,.36f,.96f):Selected?RemixUiPresentation.SelectedSurface:hovered || focused?new Color(.10f,.075f,.17f,.95f):RemixUiPresentation.Surface;
+            bool contrast=presentation.manager.accessibility!=null && presentation.manager.accessibility.HighContrast;
+            if(contrast)surface=Selected?presentation.manager.accessibility.contrastSelected:Color.black;
             if(button.targetGraphic!=null)button.targetGraphic.color=surface;
             if(outline!=null)outline.color=new Color(.70f,.55f,1,!enabled?.09f:down?1:Selected?.75f:hovered || focused?.6f:.22f);
+            if(contrast && outline!=null)outline.color=enabled?Color.white:new Color(1,1,1,.4f);
             if(selectedMark!=null){selectedMark.enabled=Selected;selectedMark.color=enabled?RemixUiPresentation.Violet:new Color(.5f,.5f,.6f,.3f);}
             if(numeric && sourceLabel!=null)sourceLabel.color=enabled?RemixUiPresentation.Ink:new Color(.60f,.60f,.68f,.30f);
             string key=iconKey;

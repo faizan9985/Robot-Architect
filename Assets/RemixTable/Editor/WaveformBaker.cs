@@ -105,8 +105,9 @@ namespace RemixTable.Editor
             var scene=EditorSceneManager.OpenScene(RemixSceneBuilder.ScenePath);
             RemixSeatedLayout.Validate();RemixSeatedLayout.ValidateZoom();
             var manager=UnityEngine.Object.FindFirstObjectByType<RemixTableManager>();
-            foreach(var stem in manager.library.songs[0].stems)
-                RemixSceneBuilder.Require(stem.waveform!=null && stem.waveform.SampleFrames==stem.clip.samples && stem.waveform.SampleRate==stem.clip.frequency,"waveform aligned to "+stem.id);
+            foreach(var song in manager.library.songs) if(SongLibraryManager.HasAudio(song))
+                foreach(var stem in song.stems)
+                    RemixSceneBuilder.Require(stem.waveform!=null && stem.waveform.SampleFrames==stem.clip.samples && stem.waveform.SampleRate==stem.clip.frequency,"waveform aligned to "+song.title+" "+stem.id);
             File.WriteAllText("Logs/RemixWaveformValidation.txt","COMPILATION_AND_SCENE_VALIDATION_PASS");
             Debug.Log("REMIX_WAVEFORM_VALIDATION_PASS");
         }

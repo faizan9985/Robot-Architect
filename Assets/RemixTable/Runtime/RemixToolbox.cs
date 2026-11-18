@@ -13,6 +13,7 @@ namespace RemixTable
         public RemixTransport transport;
         public SpatialStemField spatialField;
         public RemixRecorder recorder;                  // Found or added on the AudioListener when first used.
+        public RemixVibes vibes;
         [Tooltip("An IRemixToggle for passthrough (see Assets/Scripts/RemixPassthroughToggle).")]
         public MonoBehaviour passthrough;
         [Tooltip("An IRemixToggle for voice commands (see RemixTable.Voice).")]
@@ -88,6 +89,12 @@ namespace RemixTable
                 case RemixCommandKind.RecordStop:
                     if (recorder == null || !recorder.Recording) return false;
                     var file = recorder.StopRecording(); Say("SAVED " + System.IO.Path.GetFileName(file), 5); return true;
+                case RemixCommandKind.VibeChill: return Vibe(RemixVibe.Chill);
+                case RemixCommandKind.VibeHype: return Vibe(RemixVibe.Hype);
+                case RemixCommandKind.VibeKaraoke: return Vibe(RemixVibe.Karaoke);
+                case RemixCommandKind.VibeBreakdown: return Vibe(RemixVibe.Breakdown);
+                case RemixCommandKind.VibeAcapella: return Vibe(RemixVibe.Acapella);
+                case RemixCommandKind.VibeNormal: return Vibe(RemixVibe.Normal);
                 case RemixCommandKind.PassthroughOn:
                 case RemixCommandKind.PassthroughOff:
                     var p = Passthrough;
@@ -95,6 +102,12 @@ namespace RemixTable
                     p.SetOn(c.kind == RemixCommandKind.PassthroughOn); return true;
             }
             return false;
+        }
+        bool Vibe(RemixVibe vibe)
+        {
+            if (vibes == null) vibes = GetComponent<RemixVibes>();
+            if (vibes == null) { vibes = gameObject.AddComponent<RemixVibes>(); vibes.manager = manager; vibes.toolbox = this; }
+            return vibes.Apply(vibe);
         }
         bool SetMode(RibbonInteractionManager.ControlMode mode)
         {
