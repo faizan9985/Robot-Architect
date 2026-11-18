@@ -30,7 +30,16 @@ namespace RemixTable
         // CONTINUE: back to the song and spot the listener left, with their saved edits (RemixPersistence).
         public Button continueButton;
         public TMP_Text continueDetail;
-        public RemixMenuRibbons background;
+        // Stem ribbons of light arcing through the space around the listener while the menu is open.
+        public RemixMenuAura background;
+
+        // Menu look, shared with the editor builder (RemixMainMenuLayout): floating rounded pills, no card.
+        public static readonly Color Accent = new Color(.30f, .68f, 1f, 1);
+        public static readonly Color PrimaryFill = new Color(.24f, .58f, 1f, .92f);
+        public static readonly Color SecondaryFill = new Color(.06f, .08f, .13f, .72f);
+        public static readonly Color RowFill = new Color(.06f, .08f, .13f, .66f);
+        public static readonly Color RowCurrent = new Color(.16f, .34f, .62f, .85f);
+        public static readonly Color RowLocked = new Color(.05f, .06f, .09f, .40f);
         public const string ContinueSongKey = "remix.continue.song", ContinueTimeKey = "remix.continue.time", ContinueStampKey = "remix.continue.stamp";
 
         [System.Serializable] public struct HowToPage { public string title; [TextArea(3, 8)] public string body; }
@@ -124,7 +133,7 @@ namespace RemixTable
         {
             foreach (var p in new[] { welcomePage, songsPage, howToPage }) if (p != null) p.gameObject.SetActive(p == page);
             // Ribbons stay bright behind the welcome page and dim behind the text-heavy pages.
-            if (background != null) { var c = background.color; c.a = page == welcomePage ? 1 : .35f; background.color = c; }
+            if (background != null) background.pageDim = page == welcomePage ? 1 : .45f;
             RefreshWelcome();
         }
 
@@ -199,10 +208,15 @@ namespace RemixTable
                 bool playable = SongLibraryManager.HasAudio(song), current = i == manager.library.selectedIndex;
                 b.interactable = playable;
                 var labels = b.GetComponentsInChildren<TMP_Text>(true);
-                if (labels.Length > 0) labels[0].text = $"{i + 1:00}   {song.title}";
-                if (labels.Length > 1) labels[1].text = !playable ? "COMING SOON" : current ? "LOADED" : $"{Mathf.RoundToInt(song.bpm)} BPM  ·  {Clock(Length(song))}";
-                var image = b.targetGraphic as Image;
-                if (image != null) image.color = current ? new Color(.16f, .36f, .52f, 1) : playable ? new Color(.07f, .11f, .15f, 1) : new Color(.05f, .06f, .08f, .8f);
+                if (labels.Length > 0) { labels[0].text = $"{i + 1:00}    {song.title}"; labels[0].alpha = playable ? 1 : .4f; }
+                if (labels.Length > 1)
+                {
+                    labels[1].text = !playable ? "COMING SOON" : current ? "NOW LOADED" : $"{Mathf.RoundToInt(song.bpm)} BPM  ·  {Clock(Length(song))}";
+                    labels[1].alpha = playable ? 1 : .45f;
+                }
+                var image = b.GetComponent<Image>(); // The fill; the hover ring is the button's target graphic.
+                if (image != null) image.color = current ? RowCurrent : playable ? RowFill : RowLocked;
+                Place(b, ((RectTransform)b.transform).anchoredPosition, templateRect.sizeDelta);
             }
         }
         public void SelectSong(int index)
@@ -223,26 +237,29 @@ namespace RemixTable
                 greeting.text = h < 5 ? "LATE NIGHT SESSION" : h < 12 ? "GOOD MORNING" : h < 18 ? "GOOD AFTERNOON" : "GOOD EVENING";
             }
             if (nowLoaded != null && manager != null && manager.library.songs != null && manager.library.songs.Length > 0)
-                nowLoaded.text = "LOADED:  " + manager.library.Current.title;
+                nowLoaded.text = "NOW LOADED  ·  " + manager.library.Current.title;
             // With a session to resume, CONTINUE is the big glowing button and PLAY starts over below it.
             bool canContinue = HasContinue(out int index, out float time);
             if (continueButton != null) continueButton.gameObject.SetActive(canContinue);
             if (continueDetail != null) { continueDetail.gameObject.SetActive(canContinue); if (canContinue) continueDetail.text = ContinueText(index, time); }
             if (playButton != null)
             {
-                var r = (RectTransform)playButton.transform;
-                r.anchoredPosition = new Vector2(0, canContinue ? -88 : -20);
-                r.sizeDelta = new Vector2(canContinue ? 260 : 310, canContinue ? 52 : 76);
+                Place(playButton, new Vector2(0, canContinue ? PlayWithContinueY : PrimaryY), canContinue ? new Vector2(250, 50) : PrimarySize);
                 var label = playButton.GetComponentInChildren<TMP_Text>(true);
-                if (label != null) { label.text = canContinue ? "PLAY FROM START" : "PLAY"; label.fontSize = canContinue ? 18 : 32; label.rectTransform.sizeDelta = r.sizeDelta - new Vector2(10, 6); }
-                var image = playButton.targetGraphic as Image;
-                if (image != null) image.color = canContinue ? new Color(.07f, .11f, .15f, 1) : new Color(.22f, .62f, .95f, 1);
+                if (label != null) { label.text = canContinue ? "PLAY FROM START" : "PLAY"; label.fontSize = canContinue ? 17 : 30; }
+                var image = playButton.GetComponent<Image>();
+                if (image != null) image.color = canContinue ? SecondaryFill : PrimaryFill;
+                var ring = playButton.transform.Find("Ring"); // Outline only in its secondary (PLAY FROM START) role.
+                if (ring != null) ring.gameObject.SetActive(canContinue);
             }
+            float secondaryY = canContinue ? SecondaryWithContinueY : SecondaryY;
+            if (songsButton != null) Place(songsButton, new Vector2(-SecondaryGap, secondaryY), SecondarySize);
+            if (howToButton != null) Place(howToButton, new Vector2(SecondaryGap, secondaryY), SecondarySize);
             if (playGlow != null && playButton != null)
             {
                 var primary = canContinue && continueButton != null ? (RectTransform)continueButton.transform : (RectTransform)playButton.transform;
                 playGlow.rectTransform.anchoredPosition = primary.anchoredPosition;
-                playGlow.rectTransform.sizeDelta = primary.sizeDelta + new Vector2(20, 18);
+                playGlow.rectTransform.sizeDelta = primary.sizeDelta + new Vector2(120, 90); // Soft halo bleeding past the pill.
             }
         }
         void RefreshHowTo()
@@ -255,6 +272,25 @@ namespace RemixTable
             if (howToPageLabel != null) howToPageLabel.text = $"{howToIndex + 1} / {howToPages.Length}";
             if (howToPrevButton != null) howToPrevButton.interactable = howToIndex > 0;
             if (howToNextButton != null) howToNextButton.interactable = howToIndex < howToPages.Length - 1;
+        }
+        // Welcome page layout (canvas units = mm). Without a session to continue, PLAY is the big button; with one,
+        // CONTINUE takes that spot and PLAY FROM START sits under it.
+        public const float PrimaryY = -40, ContinueDetailY = -84, PlayWithContinueY = -126, SecondaryY = -132, SecondaryWithContinueY = -196, SecondaryGap = 122;
+        public static readonly Vector2 PrimarySize = new Vector2(300, 72), SecondarySize = new Vector2(224, 52);
+        // Sizes a pill button and keeps its corners fully round.
+        public static void Place(Button button, Vector2 position, Vector2 size)
+        {
+            var r = (RectTransform)button.transform;
+            r.anchoredPosition = position; r.sizeDelta = size;
+            var label = button.transform.Find("Label") as RectTransform;
+            if (label != null) label.sizeDelta = size - new Vector2(16, 6);
+            foreach (var image in button.GetComponentsInChildren<Image>(true))
+            {
+                if (image.sprite == null || image.type != Image.Type.Sliced || image.sprite.border.y <= 0) continue;
+                var ir = image.rectTransform;
+                float height = ir == r ? size.y : ir.rect.height > 0 && ir.anchorMin == ir.anchorMax ? ir.sizeDelta.y : size.y;
+                image.pixelsPerUnitMultiplier = image.sprite.border.y / Mathf.Max(1, height * .5f);
+            }
         }
         static float Length(SongMetadata song)
         {
@@ -285,13 +321,13 @@ namespace RemixTable
             foreach (var c in hiddenColliders) if (c != null) c.enabled = true;
             hidden.Clear(); hiddenColliders.Clear(); hiddenRenderers.Clear();
         }
-        bool Mine(Transform t) => t.IsChildOf(transform);
+        bool Mine(Transform t) => t.IsChildOf(transform) || (background != null && t.IsChildOf(background.transform));
         void SetMenuVisible(bool on)
         {
             var canvas = GetComponent<Canvas>(); if (canvas != null) canvas.enabled = on;
             if (group != null) { group.alpha = on ? 0 : 1; group.interactable = group.blocksRaycasts = on; }
             if (menuButton != null) menuButton.gameObject.SetActive(!on);
-            if (background != null) background.enabled = on; // No mesh rebuilds while the table is in use.
+            if (background != null) background.gameObject.SetActive(on); // No mesh updates while the table is in use.
         }
 
         void Update()
@@ -302,7 +338,7 @@ namespace RemixTable
             if (group != null) group.alpha = fade;
             if (playGlow != null)
             {
-                var c = playGlow.color; c.a = .35f + .3f * (.5f + .5f * Mathf.Sin((Time.unscaledTime - shownAt) * 3f));
+                var c = playGlow.color; c.a = .22f + .16f * (.5f + .5f * Mathf.Sin((Time.unscaledTime - shownAt) * 2.4f));
                 playGlow.color = c;
             }
         }
