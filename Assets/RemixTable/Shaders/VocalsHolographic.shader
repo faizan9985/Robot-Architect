@@ -3,6 +3,11 @@ Shader "RemixTable/VocalsHolographic"
     Properties
     {
         _Halo("Halo", Float) = 0
+        [HideInInspector] _Contact0("Hand 0: arc meters, radius, hover, pinch",Vector)=(0,0,0,0)
+        [HideInInspector] _Contact1("Hand 1: arc meters, radius, hover, pinch",Vector)=(0,0,0,0)
+        [HideInInspector] _ContactGeometry("Arc radius, curved",Vector)=(0,0,0,0)
+        [HideInInspector] _ContactCoefficients("Core hover/grab, rim hover/grab",Vector)=(.5,6.5,1.25,8)
+        [HideInInspector] _ContactHaloCoefficients("Halo hover/grab",Vector)=(1.25,10,0,0)
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Source blend", Float) = 1
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Destination blend", Float) = 0
         [Toggle] _ZWrite("Depth write", Float) = 1
@@ -29,10 +34,11 @@ Shader "RemixTable/VocalsHolographic"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             struct Attributes { float4 positionOS:POSITION; float2 uv:TEXCOORD0; float4 edge:TEXCOORD1; float4 automation:TEXCOORD2; half4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half intensity:TEXCOORD1; float height:TEXCOORD2; float4 automation:TEXCOORD3; float localY:TEXCOORD4; float localX:TEXCOORD5; UNITY_VERTEX_OUTPUT_STEREO };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half intensity:TEXCOORD1; float height:TEXCOORD2; float4 automation:TEXCOORD3; float localY:TEXCOORD4; float localX:TEXCOORD5; float arc:TEXCOORD6; UNITY_VERTEX_OUTPUT_STEREO };
             CBUFFER_START(UnityPerMaterial)
             float _Halo;
             float4 _PrimaryLinear, _DeepLinear, _HighlightLinear, _EdgeLinear, _LowpassLinear;
+            float4 _Contact0,_Contact1,_ContactGeometry,_ContactCoefficients,_ContactHaloCoefficients;
             CBUFFER_END
             Varyings vert(Attributes input)
             {
@@ -44,7 +50,13 @@ Shader "RemixTable/VocalsHolographic"
                 output.height=input.edge.w;
                 output.automation=input.automation;output.localY=input.positionOS.y;
                 output.localX=input.positionOS.x;
+                output.arc=_ContactGeometry.y>.5?atan2(input.positionOS.x,input.positionOS.z+_ContactGeometry.x)*_ContactGeometry.x:input.positionOS.x;
                 return output;
+            }
+            float2 ContactStrength(float arc,float4 contact)
+            {
+                float weight=1-smoothstep(0,max(contact.y,.0001),abs(arc-contact.x));
+                return float2(contact.z*(1-contact.w),contact.w)*weight;
             }
             half4 frag(Varyings input):SV_Target
             {
@@ -62,10 +74,13 @@ Shader "RemixTable/VocalsHolographic"
                 #endif
                 float y=input.uv.y;
                 float lowpass=saturate(-input.automation.x),highpass=saturate(input.automation.x);
+                float2 contact=max(ContactStrength(input.arc,_Contact0),ContactStrength(input.arc,_Contact1));
                 if(_Halo>.5)
                 {
                     float falloff=pow(saturate(1-y),2.2-lowpass*.7);
-                    return half4(lerp(deep,primary,.45)*1.5,saturate(input.intensity*.42*falloff*(1-lowpass*.5+highpass*.25)));
+                    float alpha=saturate(input.intensity*.42*falloff*(1-lowpass*.5+highpass*.25));
+                    if(any(contact>0))alpha=saturate(alpha*(1+dot(contact,_ContactHaloCoefficients.xy)));
+                    return half4(lerp(deep,primary,.45)*1.5,alpha);
                 }
                 half3 body=lerp(deep,primary,.85*smoothstep(0,1,y));
                 body=lerp(body,highlight,.12*smoothstep(.65,1,y));
@@ -98,6 +113,15 @@ Shader "RemixTable/VocalsHolographic"
                 half3 contourColor=lerp(edge,lerp(lowViolet,primary,.25),lowpass*.65);
                 body=lerp(body,contourColor*1.15*(1+highpass*.45),rim*.8*(1-lowpass*.55));
                 body*=1-lowpass*.48;
+                if(any(contact>0))
+                {
+                    // Sphere contributions, normalized for a thin filled surface. Add local colored light;
+                    // preserve automation texture, saturated palette, and exact zero-contact idle output.
+                    float core=dot(contact,_ContactCoefficients.xy),contour=dot(contact,_ContactCoefficients.zw);
+                    float focus=max((1-smoothstep(0,max(_Contact0.y*.18,.0001),abs(input.arc-_Contact0.x)))*_Contact0.w,
+                                    (1-smoothstep(0,max(_Contact1.y*.18,.0001),abs(input.arc-_Contact1.x)))*_Contact1.w);
+                    body+=primary*(.75*core/(1+core)+.60*rim*contour/(1+contour)+.20*focus);
+                }
                 return half4(body*input.intensity,1);
             }
             ENDHLSL

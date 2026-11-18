@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Hands;
+using UnityEngine.EventSystems;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 
 namespace RemixTable
 {
@@ -57,6 +60,9 @@ namespace RemixTable
         Vector3 firstPosition;
         AutomationEdit gainEdit, effectEdit, pitchEdit;
         readonly HandSample[] hands = new HandSample[2];
+        XRUIInputModule visualUiModule;
+        XRBaseInteractor[] visualUiInteractors;
+        readonly HashSet<IUIInteractor> visualUiHovered=new HashSet<IUIInteractor>();
         // position = pinch point (selection, regions). wrist = lift reference: it is steadier than the
         // fingertips, which wobble as the hand rotates slightly while lifting.
         public struct HandSample { public bool valid, pinch; public Vector3 position; public Vector3 wrist; public bool wristValid; }
@@ -71,6 +77,82 @@ namespace RemixTable
         }
         // The XR adapter and deterministic tests feed the same gesture path. Positions are world space.
         public void ProcessHands(HandSample left, HandSample right, float deltaTime)
+        {
+            ProcessInteraction(left,right,deltaTime);
+            UpdateContactGlows(left,right,deltaTime);
+        }
+        // The existing gesture state machine remains the authority. Visual hover shares its exact target arbitration.
+        RibbonView NearestRibbon(Vector3 position)
+        {
+            RibbonView nearest=null;float best=manager.design.interactionRadius;
+            foreach(var r in manager.ribbons)
+            {
+                if(r==null || !r.isActiveAndEnabled)continue;
+                if(r.CanSelectAt(position,out float distance) && distance<best){nearest=r;best=distance;}
+            }
+            return nearest;
+        }
+        bool VisualUiBlocked(int hand)
+        {
+            var module=EventSystem.current!=null?EventSystem.current.currentInputModule as XRUIInputModule:null;
+            if(module==null){if(visualUiInteractors!=null)ReleaseVisualUi();return false;}
+            if(module!=visualUiModule)
+            {
+                ReleaseVisualUi();
+                visualUiModule=module;
+                visualUiInteractors=FindObjectsByType<XRBaseInteractor>(FindObjectsInactive.Include,FindObjectsSortMode.None);
+                visualUiHovered.EnsureCapacity(visualUiInteractors.Length);
+                foreach(var interactor in visualUiInteractors)
+                {
+                    if(interactor is IUIHoverInteractor ui)
+                    {
+                        ui.uiHoverEntered.AddListener(VisualUiEnter);ui.uiHoverExited.AddListener(VisualUiExit);
+                        // Seed an already-hovered pointer once. A failed SDK model lookup allocates, so never poll it per-frame.
+                        if(module.GetTrackedDeviceModel(ui,out var model) && module.IsPointerOverGameObject(model.pointerId))visualUiHovered.Add(ui);
+                    }
+                }
+            }
+            foreach(var interactor in visualUiInteractors)
+                if(interactor!=null && !interactor.isActiveAndEnabled && interactor is IUIInteractor inactive)visualUiHovered.Remove(inactive);
+                else if(interactor!=null && interactor.isActiveAndEnabled &&
+                    interactor.handedness==(hand==0?InteractorHandedness.Left:InteractorHandedness.Right) &&
+                    interactor is IUIInteractor ui && visualUiHovered.Contains(ui))return true;
+            return false;
+        }
+        void VisualUiEnter(UIHoverEventArgs args)=>visualUiHovered.Add(args.interactorObject);
+        void VisualUiExit(UIHoverEventArgs args)=>visualUiHovered.Remove(args.interactorObject);
+        void ReleaseVisualUi()
+        {
+            if(visualUiInteractors!=null)foreach(var interactor in visualUiInteractors)
+                if(interactor!=null && interactor is IUIHoverInteractor ui){ui.uiHoverEntered.RemoveListener(VisualUiEnter);ui.uiHoverExited.RemoveListener(VisualUiExit);}
+            visualUiHovered.Clear();visualUiModule=null;visualUiInteractors=null;
+        }
+        void ClearContactGlows()
+        {
+            if(manager==null || manager.ribbons==null)return;
+            foreach(var r in manager.ribbons)if(r!=null)r.ContactGlow.Clear();
+        }
+        void UpdateContactGlows(HandSample left,HandSample right,float dt)
+        {
+            bool blocked=manager.WorkspaceAligning || (manager.anchored && !manager.WorkspaceTracked) || alignmentReleaseRequired || zoomReleaseRequired || manager.ExternalHold ||
+                State==GestureState.ZoomPending || State==GestureState.Zooming ||
+                (manager.navigationToolbar!=null && manager.navigationToolbar.MenusVisible) ||
+                (manager.palmMenuCanvas!=null && manager.palmMenuCanvas.gameObject.activeInHierarchy);
+            for(int h=0;h<2;h++)
+            {
+                var sample=h==0?left:right;
+                bool valid=sample.valid && !blocked && !VisualUiBlocked(h);
+                bool owns=valid && active!=null && active.selected && (h==owner || State==GestureState.TwoHandRegion && sample.pinch);
+                var target=owns?active:valid && active==null?NearestRibbon(sample.position):null;
+                foreach(var r in manager.ribbons)
+                {
+                    if(r==null)continue;
+                    if(!valid || !r.isActiveAndEnabled){r.ContactGlow.ClearHand(h);continue;}
+                    r.ContactGlow.Advance(r,h,dt,r==target && !owns,r==target && owns,sample.position);
+                }
+            }
+        }
+        void ProcessInteraction(HandSample left, HandSample right, float deltaTime)
         {
             hands[0]=left; hands[1]=right;
             if(manager.WorkspaceAligning) { Cancel();return; }
@@ -101,12 +183,7 @@ namespace RemixTable
                 if(manager.ExternalHold) return; // Holding a stem orb: no ribbon edit or zoom may start.
                 for(int h=0;h<2;h++) if(hands[h].valid && hands[h].pinch)
                 {
-                    RibbonView nearest=null;float best=manager.design.interactionRadius;
-                    foreach(var r in manager.ribbons)
-                    {
-                        if (r == null || !r.isActiveAndEnabled) continue;
-                        if(r.CanSelectAt(hands[h].position,out float distance) && distance<best) {nearest=r;best=distance;}
-                    }
+                    RibbonView nearest=NearestRibbon(hands[h].position);
                     if(nearest!=null) { Begin(nearest,h);break; }
                 }
                 if (active == null)
@@ -134,7 +211,7 @@ namespace RemixTable
                     owner=1-owner; RebaseGain(); endpoint=false;
                     return;
                 }
-                Cancel(); return;
+                FinishGesture(!primary.valid); return;
             }
             bool second=secondary.valid && secondary.pinch;
             if(second)
@@ -277,8 +354,10 @@ namespace RemixTable
             if(active!=null || State==GestureState.ZoomPending || State==GestureState.Zooming || (manager!=null && manager.ExternalHold)) alignmentReleaseRequired=true;
             Cancel();
         }
-        public void Cancel() { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) { if(!active.wholeStem && (gainEdit!=null || effectEdit!=null || pitchEdit!=null)) { HasLastRegion=true;LastRegionStart=active.regionStart;LastRegionEnd=active.regionEnd; } active.SetSelected(false); if(manager!=null) manager.history.EndGesture(manager.automation); }active=null;State=GestureState.Idle;gainEdit=effectEdit=pitchEdit=null;hands[0]=hands[1]=default; }
-        void OnDisable() => Cancel();
+        public void Cancel() => FinishGesture(true);
+        void FinishGesture(bool clearVisuals) { if(State==GestureState.ZoomPending || State==GestureState.Zooming) zoomReleaseRequired=true; if(active!=null) { if(!active.wholeStem && (gainEdit!=null || effectEdit!=null || pitchEdit!=null)) { HasLastRegion=true;LastRegionStart=active.regionStart;LastRegionEnd=active.regionEnd; } active.SetSelected(false); if(manager!=null) manager.history.EndGesture(manager.automation); }active=null;State=GestureState.Idle;gainEdit=effectEdit=pitchEdit=null;hands[0]=hands[1]=default;if(clearVisuals)ClearContactGlows(); }
+        void OnDisable() {Cancel();ReleaseVisualUi();}
+        void OnDestroy() => ReleaseVisualUi();
         void OnApplicationPause(bool paused) { if(paused) Cancel(); }
         void OnApplicationFocus(bool focused) { if(!focused) Cancel(); }
     }

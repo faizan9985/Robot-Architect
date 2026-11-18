@@ -20,6 +20,9 @@ namespace RemixTable
         Vector4[] derivedAutomation;
         RemixDesign design;
         StemId stem;
+        MaterialPropertyBlock contactBlock;
+        Renderer bodyRenderer,depthRenderer,haloRenderer;
+        static readonly int Contact0=Shader.PropertyToID("_Contact0"),Contact1=Shader.PropertyToID("_Contact1");
         public StemId Stem => stem;
         public Mesh DepthMesh => shell;
         public Mesh HaloMesh => halo;
@@ -55,13 +58,25 @@ namespace RemixTable
             }
             shell=CreateVisual(DepthName(stem),shellVertices,uv,sides,body);
             halo=CreateVisual(HaloName(stem),haloVertices,uv,fringe,glow);
-            if(stem!=StemId.Vocals)
+            bodyRenderer=GetComponent<MeshRenderer>();
+            depthRenderer=transform.Find(DepthName(stem)).GetComponent<MeshRenderer>();
+            haloRenderer=transform.Find(HaloName(stem)).GetComponent<MeshRenderer>();
+            contactBlock=new MaterialPropertyBlock();
+            if(stem!=StemId.Vocals)StemHologramPalette.For(stem).Apply(contactBlock);
+            contactBlock.SetVector("_ContactGeometry",new Vector4(design.Radius,design.curvedTimeline?1:0,0,0));
+            contactBlock.SetVector("_ContactCoefficients",new Vector4(RibbonContactGlow.CoreHover,RibbonContactGlow.CoreGrab,RibbonContactGlow.RimHover,RibbonContactGlow.RimGrab));
+            contactBlock.SetVector("_ContactHaloCoefficients",new Vector4(RibbonContactGlow.HaloHover,RibbonContactGlow.HaloGrab,0,0));
+            SetContacts(Vector4.zero,Vector4.zero);
+        }
+        public void SetContacts(Vector4 first,Vector4 second)
+        {
+            if(stem==StemId.Vocals && first==Vector4.zero && second==Vector4.zero)
             {
-                var block=new MaterialPropertyBlock();StemHologramPalette.For(stem).Apply(block);
-                GetComponent<MeshRenderer>().SetPropertyBlock(block);
-                transform.Find(DepthName(stem)).GetComponent<MeshRenderer>().SetPropertyBlock(block);
-                transform.Find(HaloName(stem)).GetComponent<MeshRenderer>().SetPropertyBlock(block);
+                // Retain the approved Vocals idle path, including its empty renderer property block.
+                bodyRenderer.SetPropertyBlock(null);depthRenderer.SetPropertyBlock(null);haloRenderer.SetPropertyBlock(null);return;
             }
+            contactBlock.SetVector(Contact0,first);contactBlock.SetVector(Contact1,second);
+            bodyRenderer.SetPropertyBlock(contactBlock);depthRenderer.SetPropertyBlock(contactBlock);haloRenderer.SetPropertyBlock(contactBlock);
         }
         static void Quad(int[] triangles,int k,int a,int b,int c,int d)
         {

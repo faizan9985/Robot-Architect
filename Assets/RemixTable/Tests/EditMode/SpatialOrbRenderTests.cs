@@ -42,7 +42,7 @@ namespace RemixTable.Tests
             visual.Advance(.1f,true,true,true,false);var grab=Render("Grab");
             Assert.Greater(Light(Core(grab)),Light(color)+.015f);Assert.Greater(HaloPixels(grab),HaloPixels(idle));
             visual.Advance(.25f,false,false,true,false);CollectionAssert.AreEqual(idle,Render("Released"));
-            visual.Advance(.1f,true,true,false,false);var muted=Render("MutedGrab");Assert.Less(Light(Core(muted)),Light(color));
+            visual.Advance(.1f,true,true,false,false);var muted=Render("MutedGrab");Assert.Less(Light(Core(muted)),Light(Core(grab)),"mute attenuates the equivalent approved grab state");
             Debug.Log($"SPATIAL_GPU_PASS stem={stem} idleHalo={HaloPixels(idle)} grabHalo={HaloPixels(grab)} idleCore={Light(color):F3} grabCore={Light(Core(grab)):F3}");
         }
     }

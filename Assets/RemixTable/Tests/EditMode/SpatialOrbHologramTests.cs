@@ -59,15 +59,18 @@ namespace RemixTable.Tests
             visual.Advance(.125f,false,false,true,false);Assert.That(visual.GrabAmount,Is.EqualTo(resumed*.5f).Within(.00001));
             visual.Advance(.016f,true,true,true,false,true);Assert.AreEqual(0,visual.GrabAmount);Assert.AreEqual(0,visual.HoverAmount);
         }
-        [Test] public void MixerAudibilityCapsMutedGrabAndSoloFollowsExistingMixerRules()
+        [Test] public void MixerAudibilityScalesApprovedGrabAndSoloFollowsExistingMixerRules()
         {
             var mix=new StemMix();float audibleIdle=visual.CoreIntensity,idleHalo=visual.HaloIntensity;
             mix.SetMuted(stem,true);visual.Advance(.1f,false,false,mix.Audible(stem),mix.soloed[(int)stem]);float muted=visual.CoreIntensity;
             visual.Advance(.1f,true,true,mix.Audible(stem),mix.soloed[(int)stem]);
-            Assert.Greater(visual.CoreIntensity,muted);Assert.Less(visual.CoreIntensity,audibleIdle);Assert.Less(visual.HaloIntensity,idleHalo);
+            // The Quest-approved 10x grab contribution can exceed audible idle; mute still scales the same state.
+            Assert.Greater(visual.CoreIntensity,muted);Assert.That(visual.CoreIntensity,Is.EqualTo(.22f*7.5f).Within(.00001));
+            Assert.That(visual.RimIntensity,Is.EqualTo(.22f*8.7f).Within(.00001));Assert.That(visual.HaloIntensity,Is.EqualTo(.10f*11).Within(.00001));
             mix.SetSoloed(stem,true);Assert.IsTrue(mix.Audible(stem));visual.Advance(.1f,false,true,mix.Audible(stem),true);Assert.Greater(visual.CoreIntensity,audibleIdle);
             mix.SetSoloed(stem,false);mix.SetMuted(stem,false);mix.SetSoloed(stem==StemId.Vocals?StemId.Drums:StemId.Vocals,true);
-            visual.Advance(.1f,true,true,mix.Audible(stem),false);Assert.Less(visual.CoreIntensity,audibleIdle);
+            visual.Advance(.1f,true,true,mix.Audible(stem),false);Assert.That(visual.CoreIntensity,Is.EqualTo(.22f*7.5f).Within(.00001));
+            visual.Advance(.1f,false,true,true,false);Assert.AreEqual(7.5f,visual.CoreIntensity);Assert.AreEqual(8.7f,visual.RimIntensity);Assert.AreEqual(3.85f,visual.HaloIntensity);
         }
     }
     public class SpatialOrbSceneTests

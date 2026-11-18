@@ -23,7 +23,7 @@ namespace RemixTable.Editor
             {
                 var material=Resources.Load<Material>(path);
                 if(material==null || ShaderUtil.ShaderHasError(material.shader)) throw new BuildFailedException("Vocals shader/material invalid");
-                foreach(string property in new[]{"_PrimaryLinear","_DeepLinear","_HighlightLinear","_EdgeLinear","_LowpassLinear"})
+                foreach(string property in new[]{"_PrimaryLinear","_DeepLinear","_HighlightLinear","_EdgeLinear","_LowpassLinear","_Contact0","_Contact1","_ContactGeometry","_ContactCoefficients","_ContactHaloCoefficients"})
                     if(!material.HasProperty(property))throw new BuildFailedException("Shared hologram palette property missing: "+property);
             }
             Debug.Log("VOCALS_SCENE_SHADER_VALIDATION_PASS");

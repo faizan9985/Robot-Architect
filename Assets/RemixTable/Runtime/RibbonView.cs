@@ -11,6 +11,7 @@ namespace RemixTable
         public double visualTime;
         Mesh mesh;
         VocalsHologram hologram;
+        public readonly RibbonContactGlow ContactGlow=new RibbonContactGlow();
         Vector3[] vertices;
         Color[] colors;
         Vector4[] edgeData;
@@ -41,8 +42,8 @@ namespace RemixTable
             else manager.audioManager.EndEditing(this);
             visualTime = manager.clock.elapsed;
         }
-        public void ResetPhase() { SetSelected(false); visualTime = 0; }
-        void OnDisable() => SetSelected(false);
+        public void ResetPhase() { SetSelected(false); visualTime = 0; ContactGlow.Clear(); }
+        void OnDisable() { SetSelected(false);ContactGlow.Clear(); }
         void Awake()
         {
             columns = Mathf.Clamp(manager.design.waveformColumns,128,512);
@@ -161,6 +162,7 @@ namespace RemixTable
             mesh.SetColors(colors);
             mesh.SetUVs(1,edgeData);
             if(hologram!=null) hologram.UpdateGeometry(vertices,colors,hologramAutomation);
+            if(hologram!=null) hologram.SetContacts(ContactGlow.ShaderInput(this,0),ContactGlow.ShaderInput(this,1));
         }
         void OnDestroy() { if(mesh != null) Destroy(mesh); }
     }
